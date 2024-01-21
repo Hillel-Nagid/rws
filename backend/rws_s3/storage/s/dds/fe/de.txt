@@ -25,10 +25,10 @@ async fn main() {
         .unwrap();
     let cloned_pool = pool.clone();
     let conn = cloned_pool.get().await.map_err(internal_error).unwrap();
-    // conn.execute("DROP TABLE IF EXISTS objects", &[])
-    //     .await
-    //     .map_err(internal_error)
-    //     .unwrap();
+    conn.execute("DROP TABLE IF EXISTS objects", &[])
+        .await
+        .map_err(internal_error)
+        .unwrap();
     conn.execute(
         "CREATE TABLE IF NOT EXISTS objects (
   uid uuid PRIMARY KEY,

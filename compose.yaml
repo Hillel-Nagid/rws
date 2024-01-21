@@ -1,0 +1,49 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker compose reference guide at
+# https://docs.docker.com/go/compose-spec-reference/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+services:
+  s3:
+    build:
+      context: ./backend/rws_s3
+      target: final
+    ports:
+      - 2945:2945
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - aws
+    volumes:
+      - ./backend/rws_s3/storage:/storage
+  db:
+    image: postgres
+    restart: always
+    user: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=s3
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+    hostname: rws_db
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aws
+volumes:
+  db-data:
+
+networks:
+  aws: {}
