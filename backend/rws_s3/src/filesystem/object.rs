@@ -18,7 +18,7 @@ use std::{
     fs::{self, create_dir_all, read, File},
     io::{Error, ErrorKind, Write},
 };
-use tokio_postgres::{types::Type, NoTls};
+use tokio_postgres::NoTls;
 use uuid::Uuid;
 
 type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
@@ -86,7 +86,7 @@ pub async fn create_object(
                                 &statement,
                                 &[
                                     &id,
-                                    &path,
+                                    &[bucketid, path].join("/").to_string(),
                                     &upload_date,
                                     &content_disposition,
                                     &content_length,
@@ -138,15 +138,14 @@ pub async fn get_object(
                 match read(object_name).map_err(internal_error) {
                     Ok(file) => {
                         let statement = conn.prepare(
-                            "SELECT (content_type, content_disposition) FROM objects WHERE name=$1",
+                            "SELECT content_type, content_disposition FROM objects WHERE name=$1",
                         ).await.map_err(internal_error)?;
                         let row = conn
-                            .query_one(&statement, &[&object_name])
+                            .query_one(&statement, &[&[bucketid, path].join("/").to_string()])
                             .await
-                            .map_err(internal_error)?;
-                        let row_record: Type = row.get("row");
-                        let content_type: String = row_record.get("content_type");
-                        let content_disposition: String = row_record.get("content_disposition");
+                            .map_err(internal_error)?; // Could'nt find object
+                        let content_type: String = row.get(0);
+                        let content_disposition: String = row.get(1);
                         return Ok((
                             StatusCode::OK,
                             AppendHeaders([

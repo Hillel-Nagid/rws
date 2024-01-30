@@ -10,6 +10,7 @@ use filesystem::{
     object::{create_object, get_object},
 };
 use tokio_postgres::NoTls;
+const MB: usize = 1024 * 1024;
 #[tokio::main]
 async fn main() {
     let manager = PostgresConnectionManager::new_from_stringlike(
@@ -49,7 +50,7 @@ async fn main() {
     let app = Router::new()
         .route("/createBucket/:bucketid", put(create_bucket))
         .route("/:bucketid/*objectpath", put(create_object).get(get_object))
-        .layer(DefaultBodyLimit::max(204800)) //limits to 200MB file upload
+        .layer(DefaultBodyLimit::max(200 * MB)) //limits to 200MB file upload
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:2945").await.unwrap();
     axum::serve(listener, app).await.unwrap();
