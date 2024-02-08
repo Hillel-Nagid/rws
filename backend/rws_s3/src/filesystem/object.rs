@@ -3,7 +3,7 @@ use axum::{
     extract::{Multipart, Path, State},
     http::{
         header::{CONTENT_DISPOSITION, CONTENT_TYPE},
-        StatusCode,
+        HeaderMap, StatusCode,
     },
     response::{AppendHeaders, IntoResponse, Response},
     Json,
@@ -129,6 +129,7 @@ pub async fn create_object(
 pub async fn get_object(
     State(pool): State<ConnectionPool>,
     Path((bucketid, path)): Path<(String, String)>,
+    headers: HeaderMap,
 ) -> Result<Response, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
     if set_current_dir(format!("/storage/{}", bucketid)).is_ok() {
@@ -138,7 +139,7 @@ pub async fn get_object(
                 match read(object_name).map_err(internal_error) {
                     Ok(file) => {
                         let statement = conn.prepare(
-                            "SELECT content_type, content_disposition FROM objects WHERE name=$1",
+                            "SELECT content_type, content_disposition, last_modified, etag FROM objects WHERE name=$1",
                         ).await.map_err(internal_error)?;
                         let row = conn
                             .query_one(&statement, &[&[bucketid, path].join("/").to_string()])
@@ -146,7 +147,9 @@ pub async fn get_object(
                             .map_err(internal_error)?; // Could'nt find object
                         let content_type: String = row.get(0);
                         let content_disposition: String = row.get(1);
-                        return Ok((
+                        let last_modified: i64 = row.get(2);
+                        let etag: String = row.get(3);
+                        let result_response = (
                             StatusCode::OK,
                             AppendHeaders([
                                 (CONTENT_TYPE, content_type),
@@ -154,7 +157,25 @@ pub async fn get_object(
                             ]),
                             file,
                         )
-                            .into_response());
+                            .into_response();
+
+                        let match_check = check_match(&headers, etag).map_err(internal_error)?;
+                        let since_check =
+                            check_since(&headers, last_modified).map_err(internal_error)?;
+
+                        if let Some(is_match) = match_check {
+                            if !is_match {
+                                return Ok("Content didn't match 'match' headers restrictions"
+                                    .into_response());
+                            }
+                        }
+                        if let Some(is_since) = since_check {
+                            if !is_since {
+                                return Ok("Content didn't match 'since' headers restrictions"
+                                    .into_response());
+                            }
+                        }
+                        return Ok(result_response);
                     }
 
                     Err(err) => return Err(err),
@@ -177,4 +198,58 @@ pub async fn get_object(
             "Could't find bucket",
         )));
     }
+}
+
+fn extract_header<'a>(headers: &'a HeaderMap, header_name: &str) -> Option<&'a str> {
+    if let Some(header) = headers.get(header_name) {
+        if let Ok(header_str) = header.to_str() {
+            return Some(header_str);
+        }
+        return None;
+    }
+    return None;
+}
+
+fn check_match(headers: &HeaderMap, etag: String) -> Result<Option<bool>, Error> {
+    if let Some(match_etag) = extract_header(headers, "IF-MATCH") {
+        if String::from(match_etag) == etag {
+            return Ok(Some(true));
+        }
+        return Ok(Some(false));
+    }
+    if let Some(match_etag) = extract_header(headers, "IF-NONE-MATCH") {
+        if String::from(match_etag) != etag {
+            return Ok(Some(true));
+        }
+        return Ok(Some(false));
+    }
+    return Ok(None);
+}
+
+fn check_since(headers: &HeaderMap, last_modified: i64) -> Result<Option<bool>, Error> {
+    if let Some(since) = extract_header(headers, "IF-MODIFIED-SINCE") {
+        if let Ok(since_i64) = since.parse::<i64>() {
+            if since_i64 > last_modified {
+                return Ok(Some(true));
+            }
+            return Ok(Some(false));
+        }
+        return Err(Error::new(
+            ErrorKind::InvalidInput,
+            "Could'nt parse input timestamp",
+        ));
+    }
+    if let Some(since) = extract_header(headers, "IF-UNMODIFIED-SINCE") {
+        if let Ok(since_i64) = since.parse::<i64>() {
+            if since_i64 < last_modified {
+                return Ok(Some(true));
+            }
+            return Ok(Some(false));
+        }
+        return Err(Error::new(
+            ErrorKind::InvalidInput,
+            "Could'nt parse input timestamp",
+        ));
+    }
+    return Ok(None);
 }
