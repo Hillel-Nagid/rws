@@ -1,4 +1,4 @@
-use crate::internal_error;
+use crate::{internal_error, ConnectionPool};
 use axum::{
     extract::{Multipart, Path, State},
     http::{
@@ -8,8 +8,6 @@ use axum::{
     response::{AppendHeaders, IntoResponse, Response},
     Json,
 };
-use bb8::Pool;
-use bb8_postgres::PostgresConnectionManager;
 use chrono::prelude::*;
 use md5;
 use serde_json::{json, Value};
@@ -18,10 +16,8 @@ use std::{
     fs::{self, create_dir_all, read, File},
     io::{Error, ErrorKind, Write},
 };
-use tokio_postgres::NoTls;
 use uuid::Uuid;
 
-type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
 pub async fn create_object(
     State(pool): State<ConnectionPool>,
     Path((bucketid, path)): Path<(String, String)>,
@@ -79,9 +75,10 @@ pub async fn create_object(
                                 }
                             }
                             println!("parsed multipart");
-                            let statement = conn.prepare("INSERT INTO \"objects\" (uid,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)").await.map_err(internal_error)?;
+                            let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)").await.map_err(internal_error)?;
                             let id = Uuid::new_v4();
                             let upload_date = Utc::now().timestamp();
+                            let parsed_bucketid = Uuid::parse_str(&bucketid).unwrap();
                             conn.execute(
                                 &statement,
                                 &[
@@ -94,6 +91,7 @@ pub async fn create_object(
                                     &upload_date,
                                     &etag,
                                     &encrypted,
+                                    &parsed_bucketid,
                                 ],
                             )
                             .await
