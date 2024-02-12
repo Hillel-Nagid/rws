@@ -8,7 +8,9 @@ use uuid::Uuid;
 
 use crate::{internal_error, ConnectionPool};
 
-pub async fn signin(
+use super::jwt::encrypt_password;
+
+pub async fn signup(
     State(pool): State<ConnectionPool>,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, (StatusCode, String)> {
@@ -40,8 +42,12 @@ pub async fn signin(
         .prepare("INSERT INTO users (user_id,name,password,email) VALUES ($1,$2,$3,$4)")
         .await
         .map_err(internal_error)?;
+    let encrypted_password = encrypt_password(password.as_bytes()).await?;
     match conn
-        .execute(&statement, &[&user_id, &username, &password, &email])
+        .execute(
+            &statement,
+            &[&user_id, &username, &encrypted_password, &email],
+        )
         .await
         .map_err(internal_error)
     {
@@ -50,7 +56,7 @@ pub async fn signin(
     };
 }
 
-pub async fn signup(
+pub async fn signin(
     State(pool): State<ConnectionPool>,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, (StatusCode, String)> {

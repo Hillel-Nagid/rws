@@ -5,6 +5,7 @@ use auth::{
 use axum::{
     extract::DefaultBodyLimit,
     http::StatusCode,
+    middleware,
     routing::{get, post, put},
     Router,
 };
@@ -23,7 +24,7 @@ use filesystem::{
     object::{create_object, get_object},
 };
 use tokio_postgres::NoTls;
-const MB: usize = 1024 * 1024;
+const MB: usize = 1048576;
 pub type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
 
 #[tokio::main]
@@ -111,7 +112,7 @@ async fn main() {
         .route("/signin", get(signin))
         .route("/createBucket/:bucketid", put(create_bucket))
         .route("/:bucketid/*objectpath", put(create_object).get(get_object))
-        .layer(jwt::auth_check)
+        .layer(middleware::from_fn(jwt::auth_check))
         .layer(DefaultBodyLimit::max(200 * MB)) //limits to 200MB file upload
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:2945").await.unwrap();
