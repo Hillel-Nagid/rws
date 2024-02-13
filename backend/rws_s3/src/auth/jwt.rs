@@ -18,13 +18,13 @@ use jsonwebtoken::{
 use uuid::Uuid;
 
 use crate::internal_error;
-const DAY: usize = 86400000;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct JwtContent {
     exp: usize,
     username: String,
     user_id: Uuid,
+    iat: usize,
 }
 pub async fn auth_check(
     cookie_jar: CookieJar,
@@ -90,10 +90,14 @@ pub async fn authorize(
     let secret_key = std::env::var("SECRET_JWT").unwrap();
     let user_id: Uuid = query.get(0);
     let username: String = query.get(0);
+    let now = chrono::Utc::now();
+    let iat = now.timestamp() as usize;
+    let exp = (now + chrono::Duration::days(30)).timestamp() as usize;
     let content = JwtContent {
-        exp: 30 * DAY,
+        exp,
         username,
         user_id,
+        iat,
     };
     match encode(
         &Header::default(),

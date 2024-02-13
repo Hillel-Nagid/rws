@@ -1,14 +1,20 @@
+use crate::{internal_error, ConnectionPool};
 use axum::{
     extract::{Multipart, State},
-    http::StatusCode,
+    http::{header, Response, StatusCode},
+    response::IntoResponse,
     Json,
 };
+use axum_extra::extract::{
+    cookie::{Cookie, SameSite},
+    CookieJar,
+};
+use email_address::*;
 use serde_json::{json, Value};
+use time::Duration;
 use uuid::Uuid;
 
-use crate::{internal_error, ConnectionPool};
-
-use super::jwt::encrypt_password;
+use super::jwt::{authorize, encrypt_password};
 
 pub async fn signup(
     State(pool): State<ConnectionPool>,
@@ -59,8 +65,41 @@ pub async fn signup(
 pub async fn signin(
     State(pool): State<ConnectionPool>,
     mut multipart: Multipart,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
-
-    Ok(Json(json!({"result":true})))
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let conn: bb8::PooledConnection<
+        '_,
+        bb8_postgres::PostgresConnectionManager<tokio_postgres::NoTls>,
+    > = pool.get().await.map_err(internal_error)?;
+    let mut username = String::from("");
+    let mut password = String::from("");
+    let mut email = String::from("");
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        if let Some(part) = &field.name() {
+            match part {
+                &"identifier" => {
+                    let identifier = field.text().await.map_err(internal_error)?;
+                    let is_valid_email = EmailAddress::is_valid(&identifier);
+                    match is_valid_email {
+                        true => email = identifier,
+                        false => username = identifier,
+                    }
+                }
+                &"password" => password = field.text().await.map_err(internal_error)?,
+                _ => {}
+            }
+        }
+    }
+    let encrypted_password = encrypt_password(password.as_bytes()).await?;
+    let token = authorize(username, encrypted_password, email, &conn).await?;
+    let cookie = Cookie::build(("token", token.to_owned()))
+        .path("/")
+        .max_age(Duration::days(30))
+        .same_site(SameSite::Lax)
+        .http_only(true);
+    let mut response = Response::new(json!({"status":"success","token":token}).to_string());
+    response.headers_mut().insert(
+        header::SET_COOKIE,
+        cookie.to_string().parse().map_err(internal_error)?,
+    );
+    Ok(response)
 }
