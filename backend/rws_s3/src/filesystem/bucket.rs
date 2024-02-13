@@ -3,7 +3,7 @@ use std::{env::set_current_dir, fs::create_dir};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
+    Extension, Json,
 };
 use chrono::Utc;
 use serde_json::{json, Value};
@@ -14,6 +14,7 @@ use crate::{internal_error, ConnectionPool};
 pub async fn create_bucket(
     State(pool): State<ConnectionPool>,
     Path(bucketid): Path<String>,
+    Extension(user_id): Extension<Uuid>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
     match std::path::Path::new("storage").exists() {
@@ -24,7 +25,7 @@ pub async fn create_bucket(
                     let creation_date = Utc::now().timestamp();
                     let statement =
                         conn.prepare("INSERT INTO buckets (bucket_id, name, creation_date, creator) VALUES ($1, $2, $3, $4)").await.map_err(internal_error)?;
-                    conn.execute(&statement, &[&id, &bucketid, &creation_date])
+                    conn.execute(&statement, &[&id, &bucketid, &creation_date, &user_id])
                         .await
                         .map_err(internal_error)?;
                     return Ok(Json(json!({"result":"Successfuly created bucket"})));

@@ -96,11 +96,16 @@ async fn main() {
   etag text NOT NULL,
   encrypted bool NOT NULL,
   bucket_id uuid NOT NULL,
+  creator uuid NOT NULL,
   PRIMARY KEY(object_id),
   CONSTRAINT bucket_constraint
       FOREIGN KEY(bucket_id) 
         REFERENCES buckets(bucket_id)
         ON DELETE CASCADE
+  CONSTRAINT creator_constraint
+    FOREIGN KEY(creator) 
+      REFERENCES users(user_id)
+      ON DELETE SET NULL
 )",
         &[],
     )

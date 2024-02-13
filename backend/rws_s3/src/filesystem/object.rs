@@ -6,7 +6,7 @@ use axum::{
         HeaderMap, StatusCode,
     },
     response::{AppendHeaders, IntoResponse, Response},
-    Json,
+    Extension, Json,
 };
 use chrono::prelude::*;
 use md5;
@@ -21,6 +21,7 @@ use uuid::Uuid;
 pub async fn create_object(
     State(pool): State<ConnectionPool>,
     Path((bucketid, path)): Path<(String, String)>,
+    Extension(user_id): Extension<Uuid>,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
@@ -75,7 +76,7 @@ pub async fn create_object(
                                 }
                             }
                             println!("parsed multipart");
-                            let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)").await.map_err(internal_error)?;
+                            let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket_id,creator) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").await.map_err(internal_error)?;
                             let id = Uuid::new_v4();
                             let upload_date = Utc::now().timestamp();
                             let parsed_bucketid = Uuid::parse_str(&bucketid).unwrap();
@@ -92,6 +93,7 @@ pub async fn create_object(
                                     &etag,
                                     &encrypted,
                                     &parsed_bucketid,
+                                    &user_id,
                                 ],
                             )
                             .await
