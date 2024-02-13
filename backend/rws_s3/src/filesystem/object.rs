@@ -19,17 +19,18 @@ use std::{
     env::set_current_dir,
     fs::{self, create_dir_all, read, remove_file, File},
     io::{Error, ErrorKind, Write},
+    path::Path as path,
 };
 use uuid::Uuid;
 
 pub async fn create_object(
     State(pool): State<ConnectionPool>,
-    Path((bucketid, path)): Path<(String, String)>,
+    Path((bucket_name, path)): Path<(String, String)>,
     Extension(user_id): Extension<Uuid>,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    if set_current_dir(format!("/storage/{}", bucketid)).is_ok() {
+    if set_current_dir(format!("/storage/{}", bucket_name)).is_ok() {
         let mut path_vec: Vec<&str> = path.split("/").collect();
         if let Some(object_name) = path_vec.pop() {
             if create_dir_all(path_vec.join("/")).is_ok() {
@@ -75,12 +76,12 @@ pub async fn create_object(
                     let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket_id,creator) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").await.map_err(internal_error)?;
                     let id = Uuid::new_v4();
                     let upload_date = Utc::now().timestamp();
-                    let parsed_bucketid = Uuid::parse_str(&bucketid).unwrap();
+                    let parsed_bucket_name = Uuid::parse_str(&bucket_name).unwrap();
                     conn.execute(
                         &statement,
                         &[
                             &id,
-                            &[bucketid, path].join("/").to_string(),
+                            &[bucket_name, path].join("/").to_string(),
                             &upload_date,
                             &content_disposition,
                             &content_length,
@@ -88,7 +89,7 @@ pub async fn create_object(
                             &upload_date,
                             &etag,
                             &encrypted,
-                            &parsed_bucketid,
+                            &parsed_bucket_name,
                             &user_id,
                         ],
                     )
@@ -121,11 +122,11 @@ pub async fn create_object(
 
 pub async fn read_object(
     State(pool): State<ConnectionPool>,
-    Path((bucketid, path)): Path<(String, String)>,
+    Path((bucket_name, path)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Result<Response, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    if set_current_dir(format!("/storage/{}", bucketid)).is_ok() {
+    if set_current_dir(format!("/storage/{}", bucket_name)).is_ok() {
         let mut path_vec: Vec<&str> = path.split("/").collect();
         if let Some(object_name) = path_vec.pop() {
             if set_current_dir(path_vec.join("/")).is_ok() {
@@ -134,7 +135,7 @@ pub async fn read_object(
                             "SELECT content_type, content_disposition, last_modified, etag FROM objects WHERE name=$1",
                         ).await.map_err(internal_error)?;
                 let row = conn
-                    .query_one(&statement, &[&[bucketid, path].join("/").to_string()])
+                    .query_one(&statement, &[&[bucket_name, path].join("/").to_string()])
                     .await
                     .map_err(internal_error)?; // Could'nt find object
                 let content_type: String = row.get(0);
@@ -190,24 +191,45 @@ pub async fn read_object(
 }
 pub async fn delete_object(
     State(pool): State<ConnectionPool>,
-    Path((bucketid, path)): Path<(String, String)>,
+    Path((bucket_name, path)): Path<(String, String)>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    if set_current_dir(format!("/storage/{}", bucketid)).is_ok() {
-        let mut path_vec: Vec<&str> = path.split("/").collect();
-        if let Some(object_name) = path_vec.pop() {
-            if set_current_dir(path_vec.join("/")).is_ok() {
-                remove_file(object_name).map_err(internal_error)?;
-                let statement = conn
-                    .prepare("DELETE FROM objects WHERE name = $1")
-                    .await
-                    .map_err(internal_error)?;
-                conn.execute(&statement, &[&[bucketid, path].join("/").to_string()])
-                    .await
-                    .map_err(internal_error)?;
-                return Ok(Json(json!({"result":"Object deleted"})));
-            }
-        }
+    set_current_dir(format!("/storage/{}", bucket_name)).map_err(internal_error)?;
+    let mut path_vec: Vec<&str> = path.split("/").collect();
+    if let Some(object_name) = path_vec.pop() {
+        set_current_dir(path_vec.join("/")).map_err(internal_error)?;
+        remove_file(object_name).map_err(internal_error)?;
+        let statement = conn
+            .prepare("DELETE FROM objects WHERE name = $1")
+            .await
+            .map_err(internal_error)?;
+        conn.execute(&statement, &[&[bucket_name, path].join("/").to_string()])
+            .await
+            .map_err(internal_error)?;
+        return Ok(Json(json!({"result":"Object deleted"})));
+    } else {
+        return Err(internal_error(Error::new(
+            ErrorKind::Other,
+            "Could't get file name",
+        )));
     }
-    Ok(Json(json!({})))
+}
+
+pub async fn head_object(
+    Path((bucket_name, path)): Path<(String, String)>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    set_current_dir(format!("/storage/{}", bucket_name)).map_err(internal_error)?;
+    let mut path_vec: Vec<&str> = path.split("/").collect();
+    if let Some(object_name) = path_vec.pop() {
+        set_current_dir(path_vec.join("/")).map_err(internal_error)?;
+        match path::new(object_name).exists() {
+            true => Ok(Json(json!({"exists":true}))),
+            false => Ok(Json(json!({"exists":false}))),
+        }
+    } else {
+        return Err(internal_error(Error::new(
+            ErrorKind::Other,
+            "Could't get file name",
+        )));
+    }
 }
