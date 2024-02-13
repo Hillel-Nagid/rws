@@ -1,4 +1,8 @@
-use crate::{internal_error, ConnectionPool};
+use crate::{
+    internal_error,
+    utils::{check_match, check_since},
+    ConnectionPool,
+};
 use axum::{
     extract::{Multipart, Path, State},
     http::{
@@ -13,7 +17,7 @@ use md5;
 use serde_json::{json, Value};
 use std::{
     env::set_current_dir,
-    fs::{self, create_dir_all, read, File},
+    fs::{self, create_dir_all, read, remove_file, File},
     io::{Error, ErrorKind, Write},
 };
 use uuid::Uuid;
@@ -30,78 +34,67 @@ pub async fn create_object(
         if let Some(object_name) = path_vec.pop() {
             if create_dir_all(path_vec.join("/")).is_ok() {
                 if set_current_dir(path_vec.join("/")).is_ok() {
-                    let file = File::create(object_name);
-                    match file.map_err(internal_error) {
-                        Ok(mut f) => {
-                            let mut content_disposition = String::from("inline");
-                            let mut content_length = 0u32;
-                            let mut content_type = String::from("text/plain");
-                            let mut etag = String::from("");
-                            let mut encrypted: bool = false;
-                            while let Some(field) = multipart.next_field().await.unwrap() {
-                                if let Some(name) = &field.name() {
-                                    match name {
-                                        &"content-disposition" => {
-                                            content_disposition =
-                                                field.text().await.map_err(internal_error)?
-                                        }
-                                        &"content-type" => {
-                                            content_type =
-                                                field.text().await.map_err(internal_error)?
-                                        }
-                                        &"encrypted" => {
-                                            encrypted = match field
-                                                .text()
-                                                .await
-                                                .map_err(internal_error)?
-                                                .parse::<bool>()
-                                            {
-                                                Ok(value) => value,
-                                                Err(_) => false,
-                                            }
-                                        }
-                                        &"file" => {
-                                            let data = field.bytes().await.unwrap();
-                                            content_length = data.len() as u32;
-                                            etag = format!("{:x}", md5::compute(&data));
-                                            if f.write(&data).is_err() {
-                                                return Err((
-                                                    StatusCode::INTERNAL_SERVER_ERROR,
-                                                    "Failed writing to provided file".to_owned(),
-                                                ));
-                                            }
-                                        }
-                                        _ => {}
+                    let mut file = File::create(object_name).map_err(internal_error)?;
+                    let mut content_disposition = String::from("inline");
+                    let mut content_length = 0u32;
+                    let mut content_type = String::from("text/plain");
+                    let mut etag = String::from("");
+                    let mut encrypted: bool = false;
+                    while let Some(field) = multipart.next_field().await.unwrap() {
+                        if let Some(name) = &field.name() {
+                            match name {
+                                &"content-disposition" => {
+                                    content_disposition =
+                                        field.text().await.map_err(internal_error)?
+                                }
+                                &"content-type" => {
+                                    content_type = field.text().await.map_err(internal_error)?
+                                }
+                                &"encrypted" => {
+                                    encrypted = match field
+                                        .text()
+                                        .await
+                                        .map_err(internal_error)?
+                                        .parse::<bool>()
+                                    {
+                                        Ok(value) => value,
+                                        Err(_) => false,
                                     }
                                 }
+                                &"file" => {
+                                    let data = field.bytes().await.unwrap();
+                                    content_length = data.len() as u32;
+                                    etag = format!("{:x}", md5::compute(&data));
+                                    file.write(&data).map_err(internal_error)?;
+                                }
+                                _ => {}
                             }
-                            println!("parsed multipart");
-                            let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket_id,creator) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").await.map_err(internal_error)?;
-                            let id = Uuid::new_v4();
-                            let upload_date = Utc::now().timestamp();
-                            let parsed_bucketid = Uuid::parse_str(&bucketid).unwrap();
-                            conn.execute(
-                                &statement,
-                                &[
-                                    &id,
-                                    &[bucketid, path].join("/").to_string(),
-                                    &upload_date,
-                                    &content_disposition,
-                                    &content_length,
-                                    &content_type,
-                                    &upload_date,
-                                    &etag,
-                                    &encrypted,
-                                    &parsed_bucketid,
-                                    &user_id,
-                                ],
-                            )
-                            .await
-                            .map_err(internal_error)?;
-                            println!("executed");
                         }
-                        Err(e) => return Err(e),
-                    };
+                    }
+                    println!("parsed multipart");
+                    let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket_id,creator) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").await.map_err(internal_error)?;
+                    let id = Uuid::new_v4();
+                    let upload_date = Utc::now().timestamp();
+                    let parsed_bucketid = Uuid::parse_str(&bucketid).unwrap();
+                    conn.execute(
+                        &statement,
+                        &[
+                            &id,
+                            &[bucketid, path].join("/").to_string(),
+                            &upload_date,
+                            &content_disposition,
+                            &content_length,
+                            &content_type,
+                            &upload_date,
+                            &etag,
+                            &encrypted,
+                            &parsed_bucketid,
+                            &user_id,
+                        ],
+                    )
+                    .await
+                    .map_err(internal_error)?;
+                    println!("executed");
                 } else {
                     return Err(internal_error(Error::new(
                         ErrorKind::Other,
@@ -126,7 +119,7 @@ pub async fn create_object(
     }
 }
 
-pub async fn get_object(
+pub async fn read_object(
     State(pool): State<ConnectionPool>,
     Path((bucketid, path)): Path<(String, String)>,
     headers: HeaderMap,
@@ -136,50 +129,46 @@ pub async fn get_object(
         let mut path_vec: Vec<&str> = path.split("/").collect();
         if let Some(object_name) = path_vec.pop() {
             if set_current_dir(path_vec.join("/")).is_ok() {
-                match read(object_name).map_err(internal_error) {
-                    Ok(file) => {
-                        let statement = conn.prepare(
+                let file = read(object_name).map_err(internal_error)?;
+                let statement = conn.prepare(
                             "SELECT content_type, content_disposition, last_modified, etag FROM objects WHERE name=$1",
                         ).await.map_err(internal_error)?;
-                        let row = conn
-                            .query_one(&statement, &[&[bucketid, path].join("/").to_string()])
-                            .await
-                            .map_err(internal_error)?; // Could'nt find object
-                        let content_type: String = row.get(0);
-                        let content_disposition: String = row.get(1);
-                        let last_modified: i64 = row.get(2);
-                        let etag: String = row.get(3);
-                        let result_response = (
-                            StatusCode::OK,
-                            AppendHeaders([
-                                (CONTENT_TYPE, content_type),
-                                (CONTENT_DISPOSITION, content_disposition),
-                            ]),
-                            file,
-                        )
-                            .into_response();
+                let row = conn
+                    .query_one(&statement, &[&[bucketid, path].join("/").to_string()])
+                    .await
+                    .map_err(internal_error)?; // Could'nt find object
+                let content_type: String = row.get(0);
+                let content_disposition: String = row.get(1);
+                let last_modified: i64 = row.get(2);
+                let etag: String = row.get(3);
+                let result_response = (
+                    StatusCode::OK,
+                    AppendHeaders([
+                        (CONTENT_TYPE, content_type),
+                        (CONTENT_DISPOSITION, content_disposition),
+                    ]),
+                    file,
+                )
+                    .into_response();
 
-                        let match_check = check_match(&headers, etag).map_err(internal_error)?;
-                        let since_check =
-                            check_since(&headers, last_modified).map_err(internal_error)?;
+                let match_check = check_match(&headers, etag).map_err(internal_error)?;
+                let since_check = check_since(&headers, last_modified).map_err(internal_error)?;
 
-                        if let Some(is_match) = match_check {
-                            if !is_match {
-                                return Ok("Content didn't match 'match' headers restrictions"
-                                    .into_response());
-                            }
-                        }
-                        if let Some(is_since) = since_check {
-                            if !is_since {
-                                return Ok("Content didn't match 'since' headers restrictions"
-                                    .into_response());
-                            }
-                        }
-                        return Ok(result_response);
+                if let Some(is_match) = match_check {
+                    if !is_match {
+                        return Ok(
+                            "Content didn't match 'match' headers restrictions".into_response()
+                        );
                     }
-
-                    Err(err) => return Err(err),
                 }
+                if let Some(is_since) = since_check {
+                    if !is_since {
+                        return Ok(
+                            "Content didn't match 'since' headers restrictions".into_response()
+                        );
+                    }
+                }
+                return Ok(result_response);
             } else {
                 return Err(internal_error(Error::new(
                     ErrorKind::Other,
@@ -199,57 +188,26 @@ pub async fn get_object(
         )));
     }
 }
-
-fn extract_header<'a>(headers: &'a HeaderMap, header_name: &str) -> Option<&'a str> {
-    if let Some(header) = headers.get(header_name) {
-        if let Ok(header_str) = header.to_str() {
-            return Some(header_str);
-        }
-        return None;
-    }
-    return None;
-}
-
-fn check_match(headers: &HeaderMap, etag: String) -> Result<Option<bool>, Error> {
-    if let Some(match_etag) = extract_header(headers, "IF-MATCH") {
-        if String::from(match_etag) == etag {
-            return Ok(Some(true));
-        }
-        return Ok(Some(false));
-    }
-    if let Some(match_etag) = extract_header(headers, "IF-NONE-MATCH") {
-        if String::from(match_etag) != etag {
-            return Ok(Some(true));
-        }
-        return Ok(Some(false));
-    }
-    return Ok(None);
-}
-
-fn check_since(headers: &HeaderMap, last_modified: i64) -> Result<Option<bool>, Error> {
-    if let Some(since) = extract_header(headers, "IF-MODIFIED-SINCE") {
-        if let Ok(since_i64) = since.parse::<i64>() {
-            if since_i64 > last_modified {
-                return Ok(Some(true));
+pub async fn delete_object(
+    State(pool): State<ConnectionPool>,
+    Path((bucketid, path)): Path<(String, String)>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    if set_current_dir(format!("/storage/{}", bucketid)).is_ok() {
+        let mut path_vec: Vec<&str> = path.split("/").collect();
+        if let Some(object_name) = path_vec.pop() {
+            if set_current_dir(path_vec.join("/")).is_ok() {
+                remove_file(object_name).map_err(internal_error)?;
+                let statement = conn
+                    .prepare("DELETE FROM objects WHERE name = $1")
+                    .await
+                    .map_err(internal_error)?;
+                conn.execute(&statement, &[&[bucketid, path].join("/").to_string()])
+                    .await
+                    .map_err(internal_error)?;
+                return Ok(Json(json!({"result":"Object deleted"})));
             }
-            return Ok(Some(false));
         }
-        return Err(Error::new(
-            ErrorKind::InvalidInput,
-            "Could'nt parse input timestamp",
-        ));
     }
-    if let Some(since) = extract_header(headers, "IF-UNMODIFIED-SINCE") {
-        if let Ok(since_i64) = since.parse::<i64>() {
-            if since_i64 < last_modified {
-                return Ok(Some(true));
-            }
-            return Ok(Some(false));
-        }
-        return Err(Error::new(
-            ErrorKind::InvalidInput,
-            "Could'nt parse input timestamp",
-        ));
-    }
-    return Ok(None);
+    Ok(Json(json!({})))
 }

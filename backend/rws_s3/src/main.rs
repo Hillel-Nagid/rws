@@ -1,3 +1,5 @@
+mod utils;
+
 use auth::{
     jwt,
     users::{signin, signup},
@@ -6,7 +8,7 @@ use axum::{
     extract::DefaultBodyLimit,
     http::StatusCode,
     middleware,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 mod filesystem {
@@ -20,8 +22,8 @@ mod auth {
 use bb8::Pool;
 use bb8_postgres::PostgresConnectionManager;
 use filesystem::{
-    bucket::create_bucket,
-    object::{create_object, get_object},
+    bucket::{create_bucket, delete_bucket},
+    object::{create_object, delete_object, read_object},
 };
 use tokio_postgres::NoTls;
 const MB: usize = 1048576;
@@ -116,7 +118,11 @@ async fn main() {
         .route("/signup", post(signup))
         .route("/signin", get(signin))
         .route("/createBucket/:bucketid", put(create_bucket))
-        .route("/:bucketid/*objectpath", put(create_object).get(get_object))
+        .route("/deleteBucket/:bucketid", delete(delete_bucket))
+        .route(
+            "/:bucketid/*objectpath",
+            put(create_object).get(read_object).delete(delete_object),
+        )
         .layer(middleware::from_fn(jwt::auth_check))
         .layer(DefaultBodyLimit::max(200 * MB)) //limits to 200MB file upload
         .with_state(pool);
