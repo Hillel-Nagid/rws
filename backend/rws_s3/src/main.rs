@@ -2,6 +2,7 @@ mod utils;
 mod migrations {
     pub mod begin;
     pub mod database;
+    pub mod permission_values;
     pub mod revert;
 }
 use auth::{
@@ -30,7 +31,10 @@ use filesystem::{
     bucket::{create_bucket, delete_bucket, head_bucket},
     object::{create_object, delete_object, head_object, read_object},
 };
-use migrations::{begin::create_db, database::Database, revert::revert_db};
+use migrations::{
+    begin::create_db, database::Database, permission_values::set_initial_permissions,
+    revert::revert_db,
+};
 use tokio_postgres::NoTls;
 const MB: usize = 1048576;
 pub type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
@@ -93,6 +97,7 @@ async fn main() {
     create_db(Database::Users, &conn).await.unwrap();
     create_db(Database::Buckets, &conn).await.unwrap();
     create_db(Database::Objects, &conn).await.unwrap();
+    set_initial_permissions(&conn).await.unwrap();
     let app = Router::new()
         .route(Routes::Signup.as_str(), post(signup))
         .route(Routes::Signin.as_str(), get(signin))

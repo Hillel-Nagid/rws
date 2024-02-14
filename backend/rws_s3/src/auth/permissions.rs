@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 use crate::{internal_error, ConnectionPool, Routes};
 use axum::{
     body::Body,
@@ -8,7 +10,42 @@ use axum::{
     Extension,
 };
 use uuid::Uuid;
-
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Permission {
+    Write,
+    Read,
+    Owner,
+    Uknonwn,
+}
+impl Permission {
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Permission::Owner => Some("Owner"),
+            Permission::Read => Some("Read"),
+            Permission::Write => Some("Write"),
+            Permission::Uknonwn => None,
+        }
+    }
+    pub fn iter() -> Iter<'static, Permission> {
+        static DIRECTIONS: [Permission; 4] = [
+            Permission::Owner,
+            Permission::Read,
+            Permission::Write,
+            Permission::Uknonwn,
+        ];
+        DIRECTIONS.iter()
+    }
+}
+impl From<String> for Permission {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "write" => Permission::Write,
+            "read" => Permission::Read,
+            "owner" => Permission::Owner,
+            _ => Permission::Uknonwn,
+        }
+    }
+}
 pub async fn check_permissions(
     State(pool): State<ConnectionPool>,
     Extension(user_id): Extension<Uuid>,
@@ -44,6 +81,18 @@ AND b.name = $2",
         .iter()
         .map(|row| row.get(0))
         .collect();
-    req.extensions_mut().insert(permissions);
-    Ok(next.run(req).await)
+    if permissions.len() > 0 {
+        req.extensions_mut().insert(
+            permissions
+                .iter()
+                .map(|perm| Permission::from(perm.clone()))
+                .collect::<Vec<_>>(),
+        );
+        Ok(next.run(req).await)
+    } else {
+        Err((
+            StatusCode::UNAUTHORIZED,
+            "No permissions available".to_owned(),
+        ))
+    }
 }

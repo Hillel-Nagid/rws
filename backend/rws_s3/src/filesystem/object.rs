@@ -1,4 +1,5 @@
 use crate::{
+    auth::permissions::Permission,
     internal_error,
     utils::{check_match, check_since},
     ConnectionPool,
@@ -27,8 +28,15 @@ pub async fn create_object(
     State(pool): State<ConnectionPool>,
     Path((bucket_name, path)): Path<(String, String)>,
     Extension(user_id): Extension<Uuid>,
+    Extension(perms): Extension<Vec<Permission>>,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, (StatusCode, String)> {
+    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Write) {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "No permission to delete a bucket was granted".to_owned(),
+        ));
+    }
     let conn = pool.get().await.map_err(internal_error)?;
     if set_current_dir(format!("/storage/{}", bucket_name)).is_ok() {
         let mut path_vec: Vec<&str> = path.split("/").collect();
@@ -122,9 +130,16 @@ pub async fn create_object(
 
 pub async fn read_object(
     State(pool): State<ConnectionPool>,
+    Extension(perms): Extension<Vec<Permission>>,
     Path((bucket_name, path)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Result<Response, (StatusCode, String)> {
+    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Read) {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "No permission to delete a bucket was granted".to_owned(),
+        ));
+    }
     let conn = pool.get().await.map_err(internal_error)?;
     if set_current_dir(format!("/storage/{}", bucket_name)).is_ok() {
         let mut path_vec: Vec<&str> = path.split("/").collect();
@@ -191,8 +206,16 @@ pub async fn read_object(
 }
 pub async fn delete_object(
     State(pool): State<ConnectionPool>,
+    Extension(perms): Extension<Vec<Permission>>,
+
     Path((bucket_name, path)): Path<(String, String)>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
+    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Write) {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "No permission to delete a bucket was granted".to_owned(),
+        ));
+    }
     let conn = pool.get().await.map_err(internal_error)?;
     set_current_dir(format!("/storage/{}", bucket_name)).map_err(internal_error)?;
     let mut path_vec: Vec<&str> = path.split("/").collect();
@@ -216,8 +239,15 @@ pub async fn delete_object(
 }
 
 pub async fn head_object(
+    Extension(perms): Extension<Vec<Permission>>,
     Path((bucket_name, path)): Path<(String, String)>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
+    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Read) {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "No permission to delete a bucket was granted".to_owned(),
+        ));
+    }
     set_current_dir(format!("/storage/{}", bucket_name)).map_err(internal_error)?;
     let mut path_vec: Vec<&str> = path.split("/").collect();
     if let Some(object_name) = path_vec.pop() {

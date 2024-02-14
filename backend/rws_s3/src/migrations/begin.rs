@@ -16,7 +16,7 @@ pub async fn create_db(
   bucket_id uuid NOT NULL  UNIQUE,
   name text NOT NULL  UNIQUE,
   creation_date int8 NOT NULL,
-  creator uuid NOT NULL,
+  creator uuid,
   PRIMARY KEY(bucket_id)
   CONSTRAINT user_constraint
       FOREIGN KEY(creator) 
@@ -57,7 +57,7 @@ pub async fn create_db(
   etag text NOT NULL,
   encrypted bool NOT NULL,
   bucket_id uuid NOT NULL,
-  creator uuid NOT NULL,
+  creator uuid,
   PRIMARY KEY(object_id),
   CONSTRAINT bucket_constraint
       FOREIGN KEY(bucket_id) 
@@ -78,7 +78,7 @@ pub async fn create_db(
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS permissions (
   permission_id uuid NOT NULL UNIQUE,
-  user uuid NOT NULL,
+  user uuid,
   bucket uuid NOT NULL,
   permission_option uuid NOT NULL,
   PRIMARY KEY(permission_id),
