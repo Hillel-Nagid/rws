@@ -46,7 +46,7 @@ pub async fn auth_check(
                 req.extensions_mut().insert(data.claims.user_id);
             }
             Err(err) => {
-                if req.uri() != "/signin" || req.uri() != "/signup" {
+                if *req.uri() != *"/signin" || *req.uri() != *"/signup" {
                     return Ok(next.run(req).await);
                 }
                 match err.kind() {
@@ -60,6 +60,7 @@ pub async fn auth_check(
     }
     return Ok(next.run(req).await);
 }
+
 pub async fn encrypt_password(password: &[u8]) -> Result<String, (StatusCode, String)> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
@@ -69,6 +70,7 @@ pub async fn encrypt_password(password: &[u8]) -> Result<String, (StatusCode, St
         .to_string();
     Ok(format!("{}{}", salt.to_string(), password_hash))
 }
+
 pub async fn authorize(
     username: String,
     password: String,
@@ -84,27 +86,31 @@ pub async fn authorize(
         .await
         .map_err(internal_error)?;
     let query = conn
-        .query_one(&statement, &[&email, &username, &password])
+        .query_opt(&statement, &[&email, &username, &password])
         .await
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_owned()))?;
-    let secret_key = std::env::var("SECRET_JWT").unwrap();
-    let user_id: Uuid = query.get(0);
-    let username: String = query.get(0);
-    let now = chrono::Utc::now();
-    let iat = now.timestamp() as usize;
-    let exp = (now + chrono::Duration::days(30)).timestamp() as usize;
-    let content = JwtContent {
-        exp,
-        username,
-        user_id,
-        iat,
-    };
-    match encode(
-        &Header::default(),
-        &content,
-        &EncodingKey::from_secret(secret_key.as_bytes()),
-    ) {
-        Ok(token) => return Ok(token),
-        Err(err) => return Err((StatusCode::UNAUTHORIZED, err.to_string())),
+    if let Some(user) = query {
+        let secret_key = std::env::var("SECRET_JWT").unwrap();
+        let user_id: Uuid = user.get(0);
+        let username: String = user.get(1);
+        let now = chrono::Utc::now();
+        let iat = now.timestamp() as usize;
+        let exp = (now + chrono::Duration::days(30)).timestamp() as usize;
+        let content = JwtContent {
+            exp,
+            username,
+            user_id,
+            iat,
+        };
+        match encode(
+            &Header::default(),
+            &content,
+            &EncodingKey::from_secret(secret_key.as_bytes()),
+        ) {
+            Ok(token) => return Ok(token),
+            Err(err) => return Err((StatusCode::UNAUTHORIZED, err.to_string())),
+        }
+    } else {
+        Err((StatusCode::UNAUTHORIZED, "Invalid login details".to_owned()))
     }
 }

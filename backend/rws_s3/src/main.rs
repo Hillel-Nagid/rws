@@ -1,7 +1,11 @@
 mod utils;
-
+mod migrations {
+    pub mod begin;
+    pub mod database;
+    pub mod revert;
+}
 use auth::{
-    jwt,
+    jwt, permissions,
     users::{signin, signup},
 };
 use axum::{
@@ -17,6 +21,7 @@ mod filesystem {
 }
 mod auth {
     pub mod jwt;
+    pub mod permissions;
     pub mod users;
 }
 use bb8::Pool;
@@ -25,10 +30,45 @@ use filesystem::{
     bucket::{create_bucket, delete_bucket, head_bucket},
     object::{create_object, delete_object, head_object, read_object},
 };
+use migrations::{begin::create_db, database::Database, revert::revert_db};
 use tokio_postgres::NoTls;
 const MB: usize = 1048576;
 pub type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
-
+pub enum Routes {
+    Signup,
+    Signin,
+    CreateBucket,
+    DeleteBucket,
+    HeadBucket,
+    Object,
+    Unknown,
+}
+impl Routes {
+    fn as_str(&self) -> &str {
+        match self {
+            Routes::Signup => "/signup",
+            Routes::Signin => "/signin",
+            Routes::CreateBucket => "/create_bucket/:bucket_name",
+            Routes::DeleteBucket => "/delete_bucket/:bucket_name",
+            Routes::HeadBucket => "/head_bucket/:bucket_name",
+            Routes::Object => "/:bucket_name/*objectpath",
+            Routes::Unknown => "/not-found",
+        }
+    }
+}
+impl From<String> for Routes {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "/signup" => Routes::Signup,
+            "/signin" => Routes::Signin,
+            "/create_bucket/:bucket_name" => Routes::CreateBucket,
+            "/delete_bucket/:bucket_name" => Routes::DeleteBucket,
+            "/head_bucket/:bucket_name" => Routes::HeadBucket,
+            "/:bucket_name/*objectpath" => Routes::Object,
+            _ => Routes::Unknown,
+        }
+    }
+}
 #[tokio::main]
 async fn main() {
     let manager = PostgresConnectionManager::new_from_stringlike(
@@ -44,89 +84,32 @@ async fn main() {
         .unwrap();
     let cloned_pool = pool.clone();
     let conn = cloned_pool.get().await.map_err(internal_error).unwrap();
-    conn.execute("DROP TABLE IF EXISTS objects", &[])
+    revert_db(Database::Buckets, &conn).await.unwrap();
+    revert_db(Database::Objects, &conn).await.unwrap();
+    create_db(Database::PermisssionOptions, &conn)
         .await
-        .map_err(internal_error)
         .unwrap();
-    conn.execute("DROP TABLE IF EXISTS buckets", &[])
-        .await
-        .map_err(internal_error)
-        .unwrap();
-    conn.execute("DROP TABLE IF EXISTS users", &[])
-        .await
-        .map_err(internal_error)
-        .unwrap();
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS buckets (
-  user_id uuid NOT NULL UNIQUE,
-  name text NOT NULL UNIQUE,
-  password text NOT NULL,
-  email text,
-  PRIMARY KEY(user_id)
-)",
-        &[],
-    )
-    .await
-    .map_err(internal_error)
-    .unwrap();
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS users (
-  bucket_id uuid NOT NULL  UNIQUE,
-  name text NOT NULL  UNIQUE,
-  creation_date int8 NOT NULL,
-  creator uuid NOT NULL,
-  PRIMARY KEY(bucket_id)
-  CONSTRAINT user_constraint
-      FOREIGN KEY(creator) 
-        REFERENCES buckets(bucket_id)
-        ON DELETE SET NULL
-)",
-        &[],
-    )
-    .await
-    .map_err(internal_error)
-    .unwrap();
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS objects (
-  object_id uuid NOT NULL   UNIQUE,
-  name text NOT NULL   UNIQUE,
-  upload_date int8 NOT NULL,
-  content_disposition text NOT NULL,
-  content_length oid NOT NULL,
-  content_type text NOT NULL,
-  last_modified int8 NOT NULL,
-  etag text NOT NULL,
-  encrypted bool NOT NULL,
-  bucket_id uuid NOT NULL,
-  creator uuid NOT NULL,
-  PRIMARY KEY(object_id),
-  CONSTRAINT bucket_constraint
-      FOREIGN KEY(bucket_id) 
-        REFERENCES buckets(bucket_id)
-        ON DELETE CASCADE
-  CONSTRAINT creator_constraint
-    FOREIGN KEY(creator) 
-      REFERENCES users(user_id)
-      ON DELETE SET NULL
-)",
-        &[],
-    )
-    .await
-    .map_err(internal_error)
-    .unwrap();
+    create_db(Database::Permisssions, &conn).await.unwrap();
+    create_db(Database::Users, &conn).await.unwrap();
+    create_db(Database::Buckets, &conn).await.unwrap();
+    create_db(Database::Objects, &conn).await.unwrap();
     let app = Router::new()
-        .route("/signup", post(signup))
-        .route("/signin", get(signin))
-        .route("/createBucket/:bucket_name", put(create_bucket))
-        .route("/deleteBucket/:bucket_name", delete(delete_bucket))
-        .route("/headBucket/:bucket_name", head(head_bucket))
+        .route(Routes::Signup.as_str(), post(signup))
+        .route(Routes::Signin.as_str(), get(signin))
+        .route(Routes::CreateBucket.as_str(), put(create_bucket))
+        .route(Routes::DeleteBucket.as_str(), delete(delete_bucket))
+        .route(Routes::HeadBucket.as_str(), head(head_bucket))
         .route(
-            "/:bucket_name/*objectpath",
+            Routes::Object.as_str(),
             put(create_object)
                 .get(read_object)
                 .delete(delete_object)
                 .head(head_object),
         )
+        .layer(middleware::from_fn_with_state(
+            pool.clone(),
+            permissions::check_permissions,
+        ))
         .layer(middleware::from_fn(jwt::auth_check))
         .layer(DefaultBodyLimit::max(200 * MB)) //limits to 200MB file upload
         .with_state(pool);
