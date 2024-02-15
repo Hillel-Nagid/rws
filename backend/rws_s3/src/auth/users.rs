@@ -86,8 +86,7 @@ pub async fn signin(
             }
         }
     }
-    let encrypted_password = encrypt_password(password.as_bytes()).await?;
-    let token = authorize(username, encrypted_password, email, &conn).await?;
+    let token = authorize(username, password, email, &conn).await?;
     let cookie = Cookie::build(("token", token.to_owned()))
         .path("/")
         .max_age(Duration::days(30))

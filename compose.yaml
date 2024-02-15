@@ -14,6 +14,8 @@ services:
       target: final
     ports:
       - 2945:2945
+    env_file:
+      - ./backend/rws_s3/.env
     depends_on:
       db:
         condition: service_healthy

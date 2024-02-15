@@ -15,7 +15,7 @@ pub async fn set_initial_permissions(
     for permission in permission_options {
         let uid = Uuid::new_v4();
         conn.execute(
-            "INSERT INTO permission_values(permission_value_id,name) VALUE ($1,$2)",
+            "INSERT INTO permission_options(permission_option_id,name) VALUES ($1,$2)",
             &[&uid, &permission],
         )
         .await

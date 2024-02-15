@@ -1,6 +1,6 @@
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2,
+    Argon2, PasswordHash, PasswordVerifier,
 };
 use axum::{
     body::Body,
@@ -40,20 +40,20 @@ pub async fn auth_check(
                     .map_err(internal_error)?
                     .as_bytes(),
             ),
-            &Validation::new(jsonwebtoken::Algorithm::ES256),
+            &Validation::new(jsonwebtoken::Algorithm::HS256),
         ) {
             Ok(data) => {
                 req.extensions_mut().insert(data.claims.user_id);
             }
             Err(err) => {
-                if *req.uri() != *"/signin" || *req.uri() != *"/signup" {
+                if *req.uri() == *"/signin" || *req.uri() == *"/signup" {
                     return Ok(next.run(req).await);
                 }
                 match err.kind() {
                     ErrorKind::InvalidToken => {
                         return Err((StatusCode::UNAUTHORIZED, "Invalid Token".to_owned()))
                     }
-                    _ => return Err((StatusCode::UNAUTHORIZED, "Unauthorized".to_owned())),
+                    _ => return Err((StatusCode::UNAUTHORIZED, err.to_string())),
                 }
             }
         };
@@ -68,9 +68,17 @@ pub async fn encrypt_password(password: &[u8]) -> Result<String, (StatusCode, St
         .hash_password(password, &salt)
         .map_err(internal_error)?
         .to_string();
-    Ok(format!("{}{}", salt.to_string(), password_hash))
+    Ok(format!("{}", password_hash))
 }
-
+pub fn compare_passwords(
+    password: &[u8],
+    comperable_password: String,
+) -> Result<bool, (StatusCode, String)> {
+    let parsed_hash = PasswordHash::new(comperable_password.as_str()).map_err(internal_error)?;
+    return Ok(Argon2::default()
+        .verify_password(password, &parsed_hash)
+        .is_ok());
+}
 pub async fn authorize(
     username: String,
     password: String,
@@ -82,35 +90,33 @@ pub async fn authorize(
 ) -> Result<String, (StatusCode, String)> {
     dotenv().ok();
     let statement = conn
-        .prepare("SELECT user_id,name FROM users WHERE (email = $1 OR name = $2) AND password = $3")
+        .prepare("SELECT user_id,name,password FROM users WHERE email = $1 OR name = $2")
         .await
         .map_err(internal_error)?;
-    let query = conn
-        .query_opt(&statement, &[&email, &username, &password])
+    let user = conn
+        .query_one(&statement, &[&email, &username])
         .await
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_owned()))?;
-    if let Some(user) = query {
-        let secret_key = std::env::var("SECRET_JWT").unwrap();
-        let user_id: Uuid = user.get(0);
-        let username: String = user.get(1);
-        let now = chrono::Utc::now();
-        let iat = now.timestamp() as usize;
-        let exp = (now + chrono::Duration::days(30)).timestamp() as usize;
-        let content = JwtContent {
-            exp,
-            username,
-            user_id,
-            iat,
-        };
-        match encode(
-            &Header::default(),
-            &content,
-            &EncodingKey::from_secret(secret_key.as_bytes()),
-        ) {
-            Ok(token) => return Ok(token),
-            Err(err) => return Err((StatusCode::UNAUTHORIZED, err.to_string())),
-        }
-    } else {
-        Err((StatusCode::UNAUTHORIZED, "Invalid login details".to_owned()))
+    let comperable_password = user.get(2);
+    compare_passwords(password.as_bytes(), comperable_password)?;
+    let secret_key = std::env::var("SECRET_JWT").unwrap();
+    let user_id: Uuid = user.get(0);
+    let username: String = user.get(1);
+    let now = chrono::Utc::now();
+    let iat = now.timestamp() as usize;
+    let exp = (now + chrono::Duration::days(30)).timestamp() as usize;
+    let content = JwtContent {
+        exp,
+        username,
+        user_id,
+        iat,
+    };
+    match encode(
+        &Header::default(),
+        &content,
+        &EncodingKey::from_secret(secret_key.as_ref()),
+    ) {
+        Ok(token) => return Ok(token),
+        Err(err) => return Err((StatusCode::UNAUTHORIZED, err.to_string())),
     }
 }

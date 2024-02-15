@@ -17,7 +17,7 @@ pub async fn create_db(
   name text NOT NULL  UNIQUE,
   creation_date int8 NOT NULL,
   creator uuid,
-  PRIMARY KEY(bucket_id)
+  PRIMARY KEY(bucket_id),
   CONSTRAINT user_constraint
       FOREIGN KEY(creator) 
         REFERENCES users(user_id)
@@ -62,7 +62,7 @@ pub async fn create_db(
   CONSTRAINT bucket_constraint
       FOREIGN KEY(bucket) 
         REFERENCES buckets(bucket_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
   CONSTRAINT creator_constraint
     FOREIGN KEY(creator) 
       REFERENCES users(user_id)
@@ -78,18 +78,18 @@ pub async fn create_db(
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS permissions (
   permission_id uuid NOT NULL UNIQUE,
-  user uuid,
+  \"user\" uuid,
   bucket uuid NOT NULL,
   permission_option uuid NOT NULL,
   PRIMARY KEY(permission_id),
   CONSTRAINT bucket_constraint
       FOREIGN KEY(bucket) 
         REFERENCES buckets(bucket_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
   CONSTRAINT user_constraint
-    FOREIGN KEY(user) 
+    FOREIGN KEY(\"user\") 
       REFERENCES users(user_id)
-      ON DELETE SET NULL
+      ON DELETE SET NULL,
   CONSTRAINT permission_option_constraint
     FOREIGN KEY(permission_option) 
       REFERENCES permission_options(permission_option_id)

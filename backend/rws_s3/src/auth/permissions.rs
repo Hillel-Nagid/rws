@@ -39,9 +39,9 @@ impl Permission {
 impl From<String> for Permission {
     fn from(value: String) -> Self {
         match value.as_str() {
-            "write" => Permission::Write,
-            "read" => Permission::Read,
-            "owner" => Permission::Owner,
+            "Write" => Permission::Write,
+            "Read" => Permission::Read,
+            "Owner" => Permission::Owner,
             _ => Permission::Uknonwn,
         }
     }
@@ -56,11 +56,11 @@ pub async fn check_permissions(
     let conn = pool.get().await.map_err(internal_error)?;
     let req_uri = req.uri().to_string();
     match Routes::from(req_uri.clone()) {
-        Routes::Signin | Routes::Signup | Routes::Unknown => return Ok(next.run(req).await),
-        Routes::CreateBucket | Routes::DeleteBucket | Routes::HeadBucket => {
-            bucket_name = req_uri.split("/").collect::<Vec<_>>()[1].to_owned()
+        Routes::Signin | Routes::Signup => return Ok(next.run(req).await),
+        Routes::CreateBucket | Routes::DeleteBucket | Routes::HeadBucket | Routes::GetBucket => {
+            bucket_name = req_uri.split("/").collect::<Vec<_>>()[2].to_owned()
         }
-        Routes::Object => bucket_name = req_uri.split("/").collect::<Vec<_>>()[0].to_owned(),
+        Routes::Object => bucket_name = req_uri.split("/").collect::<Vec<_>>()[1].to_owned(),
     };
     let statement = conn
         .prepare(
@@ -81,18 +81,11 @@ AND b.name = $2",
         .iter()
         .map(|row| row.get(0))
         .collect();
-    if permissions.len() > 0 {
-        req.extensions_mut().insert(
-            permissions
-                .iter()
-                .map(|perm| Permission::from(perm.clone()))
-                .collect::<Vec<_>>(),
-        );
-        Ok(next.run(req).await)
-    } else {
-        Err((
-            StatusCode::UNAUTHORIZED,
-            "No permissions available".to_owned(),
-        ))
-    }
+    req.extensions_mut().insert(
+        permissions
+            .iter()
+            .map(|perm| Permission::from(perm.clone()))
+            .collect::<Vec<_>>(),
+    );
+    Ok(next.run(req).await)
 }

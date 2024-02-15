@@ -46,7 +46,6 @@ pub enum Routes {
     HeadBucket,
     GetBucket,
     Object,
-    Unknown,
 }
 impl Routes {
     fn as_str(&self) -> &str {
@@ -58,21 +57,25 @@ impl Routes {
             Routes::HeadBucket => "/head_bucket/:bucket_name",
             Routes::GetBucket => "/get_bucket/:bucket_name",
             Routes::Object => "/:bucket_name/*objectpath",
-            Routes::Unknown => "/not-found",
         }
     }
 }
 impl From<String> for Routes {
     fn from(value: String) -> Self {
-        match value.as_str() {
-            "/signup" => Routes::Signup,
-            "/signin" => Routes::Signin,
-            "/create_bucket/:bucket_name" => Routes::CreateBucket,
-            "/delete_bucket/:bucket_name" => Routes::DeleteBucket,
-            "/head_bucket/:bucket_name" => Routes::HeadBucket,
-            "/get_bucket/:bucket_name" => Routes::GetBucket,
-            "/:bucket_name/*objectpath" => Routes::Object,
-            _ => Routes::Unknown,
+        if value.starts_with("/signup") {
+            return Routes::Signup;
+        } else if value.starts_with("/signin") {
+            return Routes::Signin;
+        } else if value.starts_with("/create_bucket") {
+            return Routes::CreateBucket;
+        } else if value.starts_with("/delete_bucket") {
+            return Routes::DeleteBucket;
+        } else if value.starts_with("/head_bucket") {
+            return Routes::HeadBucket;
+        } else if value.starts_with("/get_bucket") {
+            return Routes::GetBucket;
+        } else {
+            return Routes::Object;
         }
     }
 }
@@ -92,20 +95,18 @@ async fn main() {
     let cloned_pool = pool.clone();
     let conn = cloned_pool.get().await.map_err(internal_error).unwrap();
 
-    revert_db(Database::Buckets, &conn).await.unwrap();
-    revert_db(Database::Objects, &conn).await.unwrap();
+    // revert_db(Database::Buckets, &conn).await.unwrap();
+    // revert_db(Database::Objects, &conn).await.unwrap();
     create_db(Database::PermisssionOptions, &conn)
         .await
         .unwrap();
-    create_db(Database::Permisssions, &conn).await.unwrap();
     create_db(Database::Users, &conn).await.unwrap();
     create_db(Database::Buckets, &conn).await.unwrap();
+    create_db(Database::Permisssions, &conn).await.unwrap();
     create_db(Database::Objects, &conn).await.unwrap();
-    set_initial_permissions(&conn).await.unwrap();
+    // set_initial_permissions(&conn).await.unwrap();
 
     let app = Router::new()
-        .route(Routes::Signup.as_str(), post(signup))
-        .route(Routes::Signin.as_str(), get(signin))
         .route(Routes::CreateBucket.as_str(), put(create_bucket))
         .route(Routes::DeleteBucket.as_str(), delete(delete_bucket))
         .route(Routes::HeadBucket.as_str(), head(head_bucket))
@@ -122,6 +123,8 @@ async fn main() {
             permissions::check_permissions,
         ))
         .layer(middleware::from_fn(jwt::auth_check))
+        .route(Routes::Signup.as_str(), post(signup))
+        .route(Routes::Signin.as_str(), get(signin))
         .layer(DefaultBodyLimit::max(200 * MB)) //limits to 200MB file upload
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:2945").await.unwrap();

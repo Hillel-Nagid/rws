@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::{IntoResponse, Response},
     Extension, Json,
 };
@@ -9,11 +9,9 @@ use bb8_postgres::PostgresConnectionManager;
 use chrono::Utc;
 use serde_json::{json, Value};
 use std::{
-    collections::HashMap,
     env::set_current_dir,
-    fs::{create_dir, read, read_dir, remove_dir_all, File},
+    fs::{create_dir, remove_dir_all},
     path::Path as path,
-    rc::Rc,
 };
 use tokio_postgres::NoTls;
 use uuid::Uuid;
@@ -24,7 +22,7 @@ async fn add_bucket(
     bucket_name: &str,
     conn: &PooledConnection<'_, PostgresConnectionManager<NoTls>>,
 ) -> Result<(), (StatusCode, String)> {
-    set_current_dir("storage").map_err(internal_error)?;
+    set_current_dir("/storage").map_err(internal_error)?;
     create_dir(&bucket_name).map_err(internal_error)?;
     let id = Uuid::new_v4();
     let creation_date = Utc::now().timestamp();
@@ -39,7 +37,7 @@ async fn add_bucket(
         .map_err(internal_error)?;
     let permission_id = Uuid::new_v4();
     conn.execute(
-        "INSERT INTO permissions(permission_id, user, bucket, permission) VALUES ($1, $2, $3, $4)",
+        "INSERT INTO permissions(permission_id, \"user\", bucket, permission_option) VALUES ($1, $2, $3, (SELECT permission_option_id FROM permission_options WHERE name = $4))",
         &[&permission_id, &user_id, &id, &"Owner"],
     )
     .await
@@ -47,12 +45,12 @@ async fn add_bucket(
     Ok(())
 }
 pub async fn create_bucket(
+    Extension(user_id): Extension<Uuid>,
     State(pool): State<ConnectionPool>,
     Path(bucket_name): Path<String>,
-    Extension(user_id): Extension<Uuid>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    match std::path::Path::new("storage").exists() {
+    match std::path::Path::new("/storage").exists() {
         true => {
             add_bucket(&user_id, &bucket_name, &conn).await?;
             return Ok(Json(json!({"result":"Successfuly created bucket"})));
@@ -79,23 +77,23 @@ pub async fn delete_bucket(
     set_current_dir("/storage").map_err(internal_error)?;
     remove_dir_all(&bucket_name).map_err(internal_error)?;
     let get_bucket_id_statement = conn
-        .prepare("SELECT bucket_id WHERE name = $1")
+        .prepare("SELECT bucket_id FROM buckets WHERE name = $1")
         .await
         .map_err(internal_error)?;
     let bucket_row = conn
         .query_one(&get_bucket_id_statement, &[&bucket_name])
         .await
         .map_err(internal_error)?;
-    let bucket_id: String = bucket_row.get(0);
+    let bucket_id: Uuid = bucket_row.get(0);
     let delete_objects_statement = conn
-        .prepare("DELETE FROM objects WHERE bucket_id = $1")
+        .prepare("DELETE FROM objects WHERE bucket = $1")
         .await
         .map_err(internal_error)?;
     conn.execute(&delete_objects_statement, &[&bucket_id])
         .await
         .map_err(internal_error)?;
     let statement = conn
-        .prepare("DELETE FROM buckets WHERE name = $1")
+        .prepare("DELETE FROM buckets WHERE bucket_id = $1")
         .await
         .map_err(internal_error)?;
     conn.execute(&statement, &[&bucket_id])
