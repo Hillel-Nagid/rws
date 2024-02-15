@@ -121,33 +121,10 @@ pub async fn head_bucket(
     }
 }
 
-fn list_dir(path: String) -> Result<Vec<(String, Vec<u8>)>, (StatusCode, String)> {
-    let mut buff = vec![];
-    let entries = read_dir(path).map_err(internal_error)?;
-    for entry in entries {
-        let dir_entry = entry.map_err(internal_error)?;
-        let meta = dir_entry.metadata().map_err(internal_error)?;
-        let entry_path = dir_entry.path();
-        let entry_path_str = entry_path.to_str();
-        if let Some(entry_path_some) = entry_path_str {
-            if meta.is_dir() {
-                let mut subdir = list_dir(entry_path_some.to_owned())?;
-                buff.append(&mut subdir)
-            }
-            if meta.is_file() {
-                let file = read(entry_path_some.to_owned()).map_err(internal_error)?;
-                buff.push((entry_path_some.to_owned(), file))
-            }
-        }
-    }
-    Ok(buff)
-}
-
 pub async fn read_bucket(
     State(pool): State<ConnectionPool>,
     Extension(perms): Extension<Vec<Permission>>,
     Path(bucket_name): Path<String>,
-    headers: HeaderMap,
 ) -> Result<Response, (StatusCode, String)> {
     if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Read) {
         return Err((
@@ -157,70 +134,6 @@ pub async fn read_bucket(
     }
 
     let conn = pool.get().await.map_err(internal_error)?;
-    if set_current_dir(format!("/storage/{}", bucket_name)).is_ok() {
-        let objects = list_dir("".to_string())?;
-        Ok(objects.into_response())
-    }
-    Err((
-        StatusCode::INTERNAL_SERVER_ERROR,
-        "Failed reading bucket".to_owned(),
-    ))
+    let objects = conn.query("SELECT name FROM objects WHERE bucket = (SELECT bucket_id FROM buckets WHERE name = $1)", &[&bucket_name]).await.map_err(internal_error)?.iter().map(|row|row.get(0)).collect::<Vec<String>>();
+    return Ok(Json(json!(objects)).into_response());
 }
-//                 let file = read(object_name).map_err(internal_error)?;
-//                 let statement = conn.prepare(
-//                             "SELECT content_type, content_disposition, last_modified, etag FROM objects WHERE name=$1",
-//                         ).await.map_err(internal_error)?;
-//                 let row = conn
-//                     .query_one(&statement, &[&[bucket_name, path].join("/").to_string()])
-//                     .await
-//                     .map_err(internal_error)?; // Could'nt find object
-//                 let content_type: String = row.get(0);
-//                 let content_disposition: String = row.get(1);
-//                 let last_modified: i64 = row.get(2);
-//                 let etag: String = row.get(3);
-//                 let result_response = (
-//                     StatusCode::OK,
-//                     AppendHeaders([
-//                         (CONTENT_TYPE, content_type),
-//                         (CONTENT_DISPOSITION, content_disposition),
-//                     ]),
-//                     file,
-//                 )
-//                     .into_response();
-
-//                 let match_check = check_match(&headers, etag).map_err(internal_error)?;
-//                 let since_check = check_since(&headers, last_modified).map_err(internal_error)?;
-
-//                 if let Some(is_match) = match_check {
-//                     if !is_match {
-//                         return Ok(
-//                             "Content didn't match 'match' headers restrictions".into_response()
-//                         );
-//                     }
-//                 }
-//                 if let Some(is_since) = since_check {
-//                     if !is_since {
-//                         return Ok(
-//                             "Content didn't match 'since' headers restrictions".into_response()
-//                         );
-//                     }
-//                 }
-//                 return Ok(result_response);
-//             } else {
-//                 return Err(internal_error(Error::new(
-//                     ErrorKind::Other,
-//                     "Could't set work dir as file path",
-//                 )));
-//             }
-//         } else {
-//             return Err(internal_error(Error::new(
-//                 ErrorKind::Other,
-//                 "Could't get file name",
-//             )));
-//         }
-//     } else {
-//         return Err(internal_error(Error::new(
-//             ErrorKind::Other,
-//             "Could't find bucket",
-//         )));
-//     }

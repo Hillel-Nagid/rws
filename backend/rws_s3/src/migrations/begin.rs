@@ -47,8 +47,8 @@ pub async fn create_db(
         Database::Objects => {
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS objects (
-  object_id uuid NOT NULL   UNIQUE,
-  name text NOT NULL   UNIQUE,
+  object_id uuid NOT NULL UNIQUE,
+  name text NOT NULL UNIQUE,
   upload_date int8 NOT NULL,
   content_disposition text NOT NULL,
   content_length oid NOT NULL,
@@ -56,11 +56,11 @@ pub async fn create_db(
   last_modified int8 NOT NULL,
   etag text NOT NULL,
   encrypted bool NOT NULL,
-  bucket_id uuid NOT NULL,
+  bucket uuid NOT NULL,
   creator uuid,
   PRIMARY KEY(object_id),
   CONSTRAINT bucket_constraint
-      FOREIGN KEY(bucket_id) 
+      FOREIGN KEY(bucket) 
         REFERENCES buckets(bucket_id)
         ON DELETE CASCADE
   CONSTRAINT creator_constraint

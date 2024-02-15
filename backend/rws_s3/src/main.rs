@@ -28,7 +28,7 @@ mod auth {
 use bb8::Pool;
 use bb8_postgres::PostgresConnectionManager;
 use filesystem::{
-    bucket::{create_bucket, delete_bucket, head_bucket},
+    bucket::{create_bucket, delete_bucket, head_bucket, read_bucket},
     object::{create_object, delete_object, head_object, read_object},
 };
 use migrations::{
@@ -44,6 +44,7 @@ pub enum Routes {
     CreateBucket,
     DeleteBucket,
     HeadBucket,
+    GetBucket,
     Object,
     Unknown,
 }
@@ -55,6 +56,7 @@ impl Routes {
             Routes::CreateBucket => "/create_bucket/:bucket_name",
             Routes::DeleteBucket => "/delete_bucket/:bucket_name",
             Routes::HeadBucket => "/head_bucket/:bucket_name",
+            Routes::GetBucket => "/get_bucket/:bucket_name",
             Routes::Object => "/:bucket_name/*objectpath",
             Routes::Unknown => "/not-found",
         }
@@ -68,6 +70,7 @@ impl From<String> for Routes {
             "/create_bucket/:bucket_name" => Routes::CreateBucket,
             "/delete_bucket/:bucket_name" => Routes::DeleteBucket,
             "/head_bucket/:bucket_name" => Routes::HeadBucket,
+            "/get_bucket/:bucket_name" => Routes::GetBucket,
             "/:bucket_name/*objectpath" => Routes::Object,
             _ => Routes::Unknown,
         }
@@ -88,6 +91,7 @@ async fn main() {
         .unwrap();
     let cloned_pool = pool.clone();
     let conn = cloned_pool.get().await.map_err(internal_error).unwrap();
+
     revert_db(Database::Buckets, &conn).await.unwrap();
     revert_db(Database::Objects, &conn).await.unwrap();
     create_db(Database::PermisssionOptions, &conn)
@@ -98,12 +102,14 @@ async fn main() {
     create_db(Database::Buckets, &conn).await.unwrap();
     create_db(Database::Objects, &conn).await.unwrap();
     set_initial_permissions(&conn).await.unwrap();
+
     let app = Router::new()
         .route(Routes::Signup.as_str(), post(signup))
         .route(Routes::Signin.as_str(), get(signin))
         .route(Routes::CreateBucket.as_str(), put(create_bucket))
         .route(Routes::DeleteBucket.as_str(), delete(delete_bucket))
         .route(Routes::HeadBucket.as_str(), head(head_bucket))
+        .route(Routes::GetBucket.as_str(), head(read_bucket))
         .route(
             Routes::Object.as_str(),
             put(create_object)

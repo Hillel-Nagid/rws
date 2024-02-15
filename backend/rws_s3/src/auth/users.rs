@@ -5,10 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use axum_extra::extract::{
-    cookie::{Cookie, SameSite},
-    CookieJar,
-};
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use email_address::*;
 use serde_json::{json, Value};
 use time::Duration;
