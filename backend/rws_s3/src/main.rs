@@ -28,13 +28,10 @@ mod auth {
 use bb8::Pool;
 use bb8_postgres::PostgresConnectionManager;
 use filesystem::{
-    bucket::{create_bucket, delete_bucket, head_bucket, read_bucket},
+    bucket::{create_bucket, delete_bucket, read_bucket},
     object::{create_object, delete_object, head_object, read_object},
 };
-use migrations::{
-    begin::create_db, database::Database, permission_values::set_initial_permissions,
-    revert::revert_db,
-};
+use migrations::{begin::create_db, database::Database};
 use tokio_postgres::NoTls;
 const MB: usize = 1048576;
 pub type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
@@ -43,7 +40,6 @@ pub enum Routes {
     Signin,
     CreateBucket,
     DeleteBucket,
-    HeadBucket,
     GetBucket,
     Object,
 }
@@ -54,7 +50,6 @@ impl Routes {
             Routes::Signin => "/signin",
             Routes::CreateBucket => "/create_bucket/:bucket_name",
             Routes::DeleteBucket => "/delete_bucket/:bucket_name",
-            Routes::HeadBucket => "/head_bucket/:bucket_name",
             Routes::GetBucket => "/get_bucket/:bucket_name",
             Routes::Object => "/:bucket_name/*objectpath",
         }
@@ -70,8 +65,6 @@ impl From<String> for Routes {
             return Routes::CreateBucket;
         } else if value.starts_with("/delete_bucket") {
             return Routes::DeleteBucket;
-        } else if value.starts_with("/head_bucket") {
-            return Routes::HeadBucket;
         } else if value.starts_with("/get_bucket") {
             return Routes::GetBucket;
         } else {
@@ -109,7 +102,6 @@ async fn main() {
     let app = Router::new()
         .route(Routes::CreateBucket.as_str(), put(create_bucket))
         .route(Routes::DeleteBucket.as_str(), delete(delete_bucket))
-        .route(Routes::HeadBucket.as_str(), head(head_bucket))
         .route(Routes::GetBucket.as_str(), head(read_bucket))
         .route(
             Routes::Object.as_str(),

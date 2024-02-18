@@ -7,7 +7,7 @@ use crate::{
 use axum::{
     extract::{Multipart, Path, State},
     http::{
-        header::{CONTENT_DISPOSITION, CONTENT_TYPE},
+        header::{CONTENT_DISPOSITION, CONTENT_LENGTH, CONTENT_TYPE},
         HeaderMap, StatusCode,
     },
     response::{AppendHeaders, IntoResponse, Response},
@@ -31,10 +31,11 @@ pub async fn create_object(
     Extension(perms): Extension<Vec<Permission>>,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, (StatusCode, String)> {
-    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Write) {
+    if !perms.contains(&Permission::Owner) && !perms.contains(&Permission::Write) {
+        println!("{:?}", perms);
         return Err((
             StatusCode::UNAUTHORIZED,
-            "No permission to delete a bucket was granted".to_owned(),
+            "No permission to create an object was granted".to_owned(),
         ));
     }
     let conn = pool.get().await.map_err(internal_error)?;
@@ -80,11 +81,17 @@ pub async fn create_object(
                             }
                         }
                     }
-                    println!("parsed multipart");
-                    let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket_id,creator) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").await.map_err(internal_error)?;
+                    let statement = conn.prepare("INSERT INTO \"objects\" (object_id,name,upload_date,content_disposition,content_length,content_type,last_modified,etag,encrypted,bucket,creator) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)").await.map_err(internal_error)?;
                     let id = Uuid::new_v4();
                     let upload_date = Utc::now().timestamp();
-                    let parsed_bucket_name = Uuid::parse_str(&bucket_name).unwrap();
+                    let bucket_id: Uuid = conn
+                        .query_one(
+                            "SELECT bucket_id FROM buckets WHERE name =  $1",
+                            &[&bucket_name],
+                        )
+                        .await
+                        .map_err(internal_error)?
+                        .get(0);
                     conn.execute(
                         &statement,
                         &[
@@ -97,13 +104,12 @@ pub async fn create_object(
                             &upload_date,
                             &etag,
                             &encrypted,
-                            &parsed_bucket_name,
+                            &bucket_id,
                             &user_id,
                         ],
                     )
                     .await
                     .map_err(internal_error)?;
-                    println!("executed");
                 } else {
                     return Err(internal_error(Error::new(
                         ErrorKind::Other,
@@ -134,10 +140,10 @@ pub async fn read_object(
     Path((bucket_name, path)): Path<(String, String)>,
     headers: HeaderMap,
 ) -> Result<Response, (StatusCode, String)> {
-    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Read) {
+    if !perms.contains(&Permission::Owner) && !perms.contains(&Permission::Read) {
         return Err((
             StatusCode::UNAUTHORIZED,
-            "No permission to delete a bucket was granted".to_owned(),
+            "No permission to read an object was granted".to_owned(),
         ));
     }
     let conn = pool.get().await.map_err(internal_error)?;
@@ -210,10 +216,10 @@ pub async fn delete_object(
 
     Path((bucket_name, path)): Path<(String, String)>,
 ) -> Result<Json<Value>, (StatusCode, String)> {
-    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Write) {
+    if !perms.contains(&Permission::Owner) && !perms.contains(&Permission::Write) {
         return Err((
             StatusCode::UNAUTHORIZED,
-            "No permission to delete a bucket was granted".to_owned(),
+            "No permission to delete an object was granted".to_owned(),
         ));
     }
     let conn = pool.get().await.map_err(internal_error)?;
@@ -241,11 +247,11 @@ pub async fn delete_object(
 pub async fn head_object(
     Extension(perms): Extension<Vec<Permission>>,
     Path((bucket_name, path)): Path<(String, String)>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Read) {
+) -> Result<Response, (StatusCode, String)> {
+    if !perms.contains(&Permission::Owner) && !perms.contains(&Permission::Read) {
         return Err((
             StatusCode::UNAUTHORIZED,
-            "No permission to delete a bucket was granted".to_owned(),
+            "No permission to head an object was granted".to_owned(),
         ));
     }
     set_current_dir(format!("/storage/{}", bucket_name)).map_err(internal_error)?;
@@ -253,8 +259,15 @@ pub async fn head_object(
     if let Some(object_name) = path_vec.pop() {
         set_current_dir(path_vec.join("/")).map_err(internal_error)?;
         match path::new(object_name).exists() {
-            true => Ok(Json(json!({"exists":true}))),
-            false => Ok(Json(json!({"exists":false}))),
+            true => {
+                let object_length = read(object_name).map_err(internal_error)?.len();
+                return Ok((
+                    StatusCode::OK,
+                    AppendHeaders([(CONTENT_LENGTH, object_length)]),
+                )
+                    .into_response());
+            }
+            false => return Err((StatusCode::NOT_FOUND, "Object not found".to_owned())),
         }
     } else {
         return Err(internal_error(Error::new(

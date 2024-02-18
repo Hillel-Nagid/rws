@@ -102,32 +102,15 @@ pub async fn delete_bucket(
     return Ok(Json(json!({"result":"Bucket deleted"})));
 }
 
-pub async fn head_bucket(
-    Extension(perms): Extension<Vec<Permission>>,
-    Path(bucket_name): Path<String>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Read) {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            "No permission to head a bucket was granted".to_owned(),
-        ));
-    }
-    set_current_dir("/storage").map_err(internal_error)?;
-    match path::new(&bucket_name).exists() {
-        true => return Ok(Json(json!({"exists":true}))),
-        false => return Ok(Json(json!({"exists":false}))),
-    }
-}
-
 pub async fn read_bucket(
     State(pool): State<ConnectionPool>,
     Extension(perms): Extension<Vec<Permission>>,
     Path(bucket_name): Path<String>,
 ) -> Result<Response, (StatusCode, String)> {
-    if !perms.contains(&Permission::Owner) || !perms.contains(&Permission::Read) {
+    if !perms.contains(&Permission::Owner) && !perms.contains(&Permission::Read) {
         return Err((
             StatusCode::UNAUTHORIZED,
-            "No permission to delete a bucket was granted".to_owned(),
+            "No permission to read a bucket was granted".to_owned(),
         ));
     }
 

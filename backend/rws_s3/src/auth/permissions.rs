@@ -57,7 +57,7 @@ pub async fn check_permissions(
     let req_uri = req.uri().to_string();
     match Routes::from(req_uri.clone()) {
         Routes::Signin | Routes::Signup => return Ok(next.run(req).await),
-        Routes::CreateBucket | Routes::DeleteBucket | Routes::HeadBucket | Routes::GetBucket => {
+        Routes::CreateBucket | Routes::DeleteBucket | Routes::GetBucket => {
             bucket_name = req_uri.split("/").collect::<Vec<_>>()[2].to_owned()
         }
         Routes::Object => bucket_name = req_uri.split("/").collect::<Vec<_>>()[1].to_owned(),
