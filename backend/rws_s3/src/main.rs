@@ -5,6 +5,8 @@ mod migrations {
     pub mod permission_values;
     pub mod revert;
 }
+use tower_http::cors::{Any, CorsLayer};
+
 use auth::{
     jwt, permissions,
     users::{signin, signup},
@@ -67,11 +69,11 @@ impl From<String> for Routes {
             return Routes::DeleteBucket;
         } else if value.starts_with("/get_bucket") {
             return Routes::GetBucket;
-        } else {
-            return Routes::Object;
         }
+        return Routes::Object;
     }
 }
+
 #[tokio::main]
 async fn main() {
     let manager = PostgresConnectionManager::new_from_stringlike(
@@ -98,6 +100,7 @@ async fn main() {
     create_db(Database::Permisssions, &conn).await.unwrap();
     create_db(Database::Objects, &conn).await.unwrap();
     // set_initial_permissions(&conn).await.unwrap();
+    let cors = CorsLayer::new().allow_origin(Any);
 
     let app = Router::new()
         .route(Routes::CreateBucket.as_str(), put(create_bucket))
@@ -118,10 +121,12 @@ async fn main() {
         .route(Routes::Signup.as_str(), post(signup))
         .route(Routes::Signin.as_str(), get(signin))
         .layer(DefaultBodyLimit::max(200 * MB)) //limits to 200MB file upload
+        .layer(cors)
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:2945").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
+
 fn internal_error<E>(err: E) -> (StatusCode, String)
 where
     E: std::error::Error,
