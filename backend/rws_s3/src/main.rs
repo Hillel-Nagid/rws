@@ -13,7 +13,7 @@ use auth::{
 };
 use axum::{
     extract::DefaultBodyLimit,
-    http::StatusCode,
+    http::{Method, StatusCode},
     middleware,
     routing::{delete, get, head, post, put},
     Router,
@@ -100,7 +100,15 @@ async fn main() {
     create_db(Database::Permisssions, &conn).await.unwrap();
     create_db(Database::Objects, &conn).await.unwrap();
     // set_initial_permissions(&conn).await.unwrap();
-    let cors = CorsLayer::new().allow_origin(Any);
+    let cors = CorsLayer::new()
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::HEAD,
+            Method::DELETE,
+        ])
+        .allow_origin(Any);
 
     let app = Router::new()
         .route(Routes::CreateBucket.as_str(), put(create_bucket))
