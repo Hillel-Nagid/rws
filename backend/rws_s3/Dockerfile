@@ -45,12 +45,10 @@ RUN --mount=type=bind,source=src,target=src \
     --mount=type=cache,target=/app/target/,id=rust-cache-${APP_NAME}-${TARGETPLATFORM} \
     --mount=type=cache,target=/usr/local/cargo/git/db \
     --mount=type=cache,target=/usr/local/cargo/registry/ \
-    <<EOF
-set -e
-xx-cargo build --locked --release --target-dir ./target
-cp ./target/$(xx-cargo --print-target-triple)/release/$APP_NAME /bin/s3
-xx-verify /bin/s3
-EOF
+    sh -c 'set -e && \
+           xx-cargo build --locked --release --target-dir ./target && \
+           cp ./target/$(xx-cargo --print-target-triple)/release/$APP_NAME /bin/s3 && \
+           xx-verify /bin/s3'
 
 ################################################################################
 # Create a new stage for running the application that contains the minimal
@@ -84,4 +82,4 @@ COPY --from=build /bin/s3 /bin/
 EXPOSE 2945
 
 # What the container should run when it is started.
-CMD [ "/bin/s3"]
+CMD [ "/bin/s3" ]
