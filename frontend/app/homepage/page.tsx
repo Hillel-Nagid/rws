@@ -19,6 +19,18 @@ export default function page() {
     }
   }, [token, router]);
 
+  const productsWithPlaceholders: any = [
+    ...popularProducts,
+    ...Array.from(
+      { length: Math.max(6 - popularProducts.length, 0) },
+      (_, index) => ({
+        name: "Coming Soon",
+        href: `#`,
+        disabled: true, // Assuming you want to disable clicking
+      })
+    ),
+  ];
+
   useEffect(() => {
     try {
       // var bodyFormData = new FormData();

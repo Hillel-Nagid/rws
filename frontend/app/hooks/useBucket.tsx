@@ -10,7 +10,7 @@ export function useBucket() {
     });
 
     function getAllBuckets(): any {
-        axios.
+        // axios.
     }
 
 
