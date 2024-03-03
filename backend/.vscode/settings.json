@@ -1,4 +1,0 @@
-{
-	"rust-analyzer.linkedProjects": [".\\rws_s3\\Cargo.toml"],
-	"rust-analyzer.showUnlinkedFileNotification": false
-}

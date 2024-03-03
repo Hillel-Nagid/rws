@@ -1,0 +1,10 @@
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\finl_unicode-f1bb42c5ac6590d7.rmeta: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\categories.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\grapheme_clusters.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\characters.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\grapheme_property.rs
+
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\finl_unicode-f1bb42c5ac6590d7.d: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\categories.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\grapheme_clusters.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\characters.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\grapheme_property.rs
+
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\lib.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\categories.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\grapheme_clusters.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\mod.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\characters.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\finl_unicode-1.2.0\src\data\grapheme_property.rs:

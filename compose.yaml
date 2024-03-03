@@ -10,19 +10,19 @@
 services:
   s3:
     build:
-      context: ./backend/rws_s3
+      context: ./backend/s3
       target: final
     ports:
       - 2945:2945
     env_file:
-      - ./backend/rws_s3/.env
+      - ./backend/s3/.env
     depends_on:
       db:
         condition: service_healthy
     networks:
-      - aws
+      - rws
     volumes:
-      - ./backend/rws_s3/storage:/storage
+      - ./backend/s3/storage:/storage
   db:
     image: postgres
     restart: always
@@ -43,9 +43,9 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - aws
+      - rws
 volumes:
   db-data:
 
 networks:
-  aws: {}
+  rws: {}

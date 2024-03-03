@@ -1,0 +1,10 @@
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\futures_channel-72bc8294db8533dc.rmeta: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\lock.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\queue.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\sink_impl.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\oneshot.rs
+
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\futures_channel-72bc8294db8533dc.d: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\lock.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\queue.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\sink_impl.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\oneshot.rs
+
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\lib.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\lock.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\mod.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\queue.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\mpsc\sink_impl.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-channel-0.3.30\src\oneshot.rs:

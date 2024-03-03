@@ -1,0 +1,11 @@
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\futures_core-ca6061e904f667fc.rmeta: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\future.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\stream.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\poll.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\__internal\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\__internal\atomic_waker.rs
+
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\futures_core-ca6061e904f667fc.d: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\future.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\stream.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\poll.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\__internal\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\__internal\atomic_waker.rs
+
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\lib.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\future.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\stream.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\mod.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\poll.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\__internal\mod.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\futures-core-0.3.30\src\task\__internal\atomic_waker.rs:

@@ -1,0 +1,11 @@
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\serde_urlencoded-633c284117776408.rmeta: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\de.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\key.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\pair.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\part.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\value.rs
+
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\serde_urlencoded-633c284117776408.d: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\de.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\mod.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\key.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\pair.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\part.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\value.rs
+
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\lib.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\de.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\mod.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\key.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\pair.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\part.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\serde_urlencoded-0.7.1\src\ser\value.rs:

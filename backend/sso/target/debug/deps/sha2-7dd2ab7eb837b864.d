@@ -1,0 +1,13 @@
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\sha2-7dd2ab7eb837b864.rmeta: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\core_api.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\consts.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256\soft.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256\x86.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512\soft.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512\x86.rs
+
+D:\Users\pc\Desktop\rws\backend\rws\target\debug\deps\sha2-7dd2ab7eb837b864.d: C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\lib.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\core_api.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\consts.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256\soft.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256\x86.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512\soft.rs C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512\x86.rs
+
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\lib.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\core_api.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\consts.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256\soft.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha256\x86.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512\soft.rs:
+C:\Users\hillel\.cargo\registry\src\github.com-1ecc6299db9ec823\sha2-0.10.8\src\sha512\x86.rs:
