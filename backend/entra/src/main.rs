@@ -14,7 +14,6 @@ use auth::{
 use migrations::{begin::create_db, database::Database};
 
 use axum::{
-    extract::DefaultBodyLimit,
     http::{Method, StatusCode},
     routing::{get, post},
     Router,
@@ -25,30 +24,55 @@ use tokio_postgres::NoTls;
 use tower_http::cors::{Any, CorsLayer};
 pub type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
 pub enum Routes {
-    Signup,
-    Signin,
+    CreateUser,
+    ResetPwd,
+    EnableUser,
+    DisableUser,
+    DeleteUser,
+    SearchUser,
+    GetUser,
+    ModifyUser,
+    Authorize,
 }
 impl Routes {
-    fn as_str(&self) -> &str {
+    fn as_path(&self) -> &str {
         match self {
-            Routes::Signup => "/signup",
-            Routes::Signin => "/signin",
+            Routes::CreateUser => "/createUser",
+            Routes::ResetPwd => "/resetPwd",
+            Routes::EnableUser => "/enableUser",
+            Routes::DisableUser => "/disableUser",
+            Routes::DeleteUser => "/deleteUser",
+            Routes::SearchUser => "/searchUser",
+            Routes::GetUser => "/getUser",
+            Routes::ModifyUser => "/modifyUser",
+            Routes::Authorize => "/authorize",
         }
     }
 }
 impl From<String> for Routes {
     fn from(value: String) -> Self {
-        if value.starts_with("/signup") {
-            return Routes::Signup;
+        match value.as_str() {
+            "/createUser" => Routes::CreateUser,
+            "/resetPwd" => Routes::ResetPwd,
+            "/enableUser" => Routes::EnableUser,
+            "/disableUser" => Routes::DisableUser,
+            "/deleteUser" => Routes::DeleteUser,
+            "/modifyUser" => Routes::ModifyUser,
+            "/authorize" => Routes::Authorize,
+            _ => {
+                if value.starts_with("/searchUser") {
+                    return Routes::SearchUser;
+                }
+                Routes::GetUser
+            }
         }
-        Routes::Signin
     }
 }
 
 #[tokio::main]
 async fn main() {
     let manager = PostgresConnectionManager::new_from_stringlike(
-        "host=rws_db user=postgres port=5432",
+        "host=rws_db user=postgres port=5432 database=entra",
         NoTls,
     )
     .map_err(internal_error)
@@ -66,8 +90,8 @@ async fn main() {
         .allow_origin(Any);
 
     let app = Router::new()
-        .route(Routes::Signup.as_str(), post(signup))
-        .route(Routes::Signin.as_str(), get(signin))
+        .route(Routes::CreateUser.as_path(), post(signup))
+        .route(Routes::Authorize.as_path(), get(signin))
         .layer(cors)
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:2946").await.unwrap();

@@ -1,6 +1,6 @@
 {
-  "rust-analyzer.linkedProjects": [
-    "./backend/s3/Cargo.toml",
-    "./backend/sso/Cargo.toml"
-  ]
+	"rust-analyzer.linkedProjects": [
+		"./backend/s3/Cargo.toml",
+		"./backend/entra/Cargo.toml"
+	]
 }

@@ -21,12 +21,14 @@ pub async fn signup(
         '_,
         bb8_postgres::PostgresConnectionManager<tokio_postgres::NoTls>,
     > = pool.get().await.map_err(internal_error)?;
+    let mut domain = String::new();
     let mut username = String::from("");
     let mut password = String::from("");
     let mut email = String::from("");
     while let Some(field) = multipart.next_field().await.unwrap() {
         if let Some(part) = &field.name() {
             match part {
+                &"domain" => domain = field.text().await.map_err(internal_error)?,
                 &"username" => username = field.text().await.map_err(internal_error)?,
                 &"password" => password = field.text().await.map_err(internal_error)?,
                 &"email" => email = field.text().await.map_err(internal_error)?,
@@ -34,28 +36,32 @@ pub async fn signup(
             }
         }
     }
-    if username == "".to_owned() || password == "".to_owned() || email == "".to_owned() {
+    if username == "".to_owned()
+        || password == "".to_owned()
+        || email == "".to_owned()
+        || domain == "".to_owned()
+    {
         return Err((
             StatusCode::BAD_REQUEST,
-            "Username or password or email were not specified".to_owned(),
+            "Username or password or email or domain were not specified".to_owned(),
         ));
     }
     let user_id = Uuid::new_v4();
     let statement = conn
-        .prepare("INSERT INTO users (user_id,name,password,email) VALUES ($1,$2,$3,$4)")
+        .prepare("INSERT INTO users (user_id,name,password,email,prefered_username,tenant) VALUES ($1,$2,$3,$4,$4,(SELECT tenant FROM tenant_domains WHERE domain = $5))")
         .await
         .map_err(internal_error)?;
     let encrypted_password = encrypt_password(password.as_bytes()).await?;
     match conn
         .execute(
             &statement,
-            &[&user_id, &username, &encrypted_password, &email],
+            &[&user_id, &username, &encrypted_password, &email, &domain],
         )
         .await
         .map_err(internal_error)
     {
         Ok(_) => return Ok(Json(json!({"result":"User created successfuly"}))),
-        Err(_) => return Err((StatusCode::BAD_REQUEST, "Username already taken".to_owned())),
+        Err(_) => return Err((StatusCode::BAD_REQUEST, "Failed creating a user".to_owned())),
     };
 }
 
