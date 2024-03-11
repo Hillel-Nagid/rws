@@ -17,7 +17,7 @@ use chrono::prelude::*;
 use md5;
 use serde_json::{json, Value};
 use std::{
-    env::set_current_dir,
+    env::{set_current_dir,current_dir},
     fs::{self, create_dir_all, read, remove_file, File},
     io::{Error, ErrorKind, Write},
     path::Path as path,
@@ -43,6 +43,7 @@ pub async fn create_object(
         let mut path_vec: Vec<&str> = path.split("/").collect();
         if let Some(object_name) = path_vec.pop() {
             if create_dir_all(path_vec.join("/")).is_ok() {
+                println!("{:?}",current_dir().unwrap());
                 if set_current_dir(path_vec.join("/")).is_ok() {
                     let mut file = File::create(object_name).map_err(internal_error)?;
                     let mut content_disposition = String::from("inline");

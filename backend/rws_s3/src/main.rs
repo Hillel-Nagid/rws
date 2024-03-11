@@ -33,7 +33,7 @@ use filesystem::{
     bucket::{create_bucket, delete_bucket, read_bucket},
     object::{create_object, delete_object, head_object, read_object},
 };
-use migrations::{begin::create_db, database::Database};
+use migrations::{begin::create_db, database::Database, permission_values::set_initial_permissions};
 use tokio_postgres::NoTls;
 const MB: usize = 1048576;
 pub type ConnectionPool = Pool<PostgresConnectionManager<NoTls>>;
@@ -105,7 +105,7 @@ async fn main() {
     let app = Router::new()
         .route(Routes::CreateBucket.as_str(), put(create_bucket))
         .route(Routes::DeleteBucket.as_str(), delete(delete_bucket))
-        .route(Routes::GetBucket.as_str(), head(read_bucket))
+        .route(Routes::GetBucket.as_str(), get(read_bucket))
         .route(
             Routes::Object.as_str(),
             put(create_object)

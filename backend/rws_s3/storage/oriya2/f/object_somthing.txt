@@ -1,0 +1,84 @@
+import openpyxl
+from openpyxl import load_workbook
+import webbrowser
+
+
+def get_data_from_excel(filename):
+    workbook = load_workbook(filename)
+    sheet = workbook.active
+
+    data = []
+
+    for row in sheet.iter_rows(values_only=True):
+        if row[0] != "name":
+            name, x, y = row
+            data.append((name, x, y))
+
+    return data
+
+
+def generate_html_with_map(api_key, data):
+    markers_code = "\n".join(
+        [f"""
+        var marker{index} = new google.maps.Marker({{
+            position: new google.maps.LatLng({x}, {y}),
+            map: map,
+            title: '{name}'
+        }});
+
+        var infowindow{index} = new google.maps.InfoWindow({{
+            content: '<p>{name}</p>'
+        }});
+
+        infowindow{index}.open(map, marker{index});  // Open InfoWindow immediately
+        """
+         for index, (name, x, y) in enumerate(data)]
+    )
+
+    html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Coordinates on Map</title>
+                <script src="https://maps.googleapis.com/maps/api/js?key={api_key}&callback=initMap" async defer></script>
+                <script type="text/javascript">
+                    function initMap() {{
+                        var centerCoord = new google.maps.LatLng({data[0][1]}, {data[0][2]});
+                        var map = new google.maps.Map(document.getElementById('map'), {{
+                            zoom: 10,
+                            center: centerCoord
+                        }});
+            
+                        {markers_code}
+                    }}
+                </script>
+                <style>
+                    /* Make the map go fullscreen */
+                    html, body, #map {{
+                        height: 100%;
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                    }}
+                </style>
+            </head>
+            <body onload="initMap()">
+                <div id="map"></div>
+            </body>
+            </html>
+            """
+    with open("map.html", "w") as f:
+        f.write(html)
+
+    print("HTML file with map generated as map.html")
+
+
+if __name__ == "__main__":
+    API_KEY = "API_KEY"
+    excel_file = "coordinates.xlsx"
+
+    data = get_data_from_excel(excel_file)
+    generate_html_with_map(API_KEY, data)
+    webbrowser.open('map.html', new=2)
+    input("stop")
+

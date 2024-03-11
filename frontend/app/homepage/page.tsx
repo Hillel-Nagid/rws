@@ -1,67 +1,52 @@
-"use client";
-import React, { useEffect } from "react";
+'use client';
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { popularProducts } from "../utils/helpers";
 import Link from "next/link";
-import axios from "axios";
+import { useBucket } from "../hooks/useBucket";
+import { Product } from "../utils/helpers";
 
-export default function page() {
+export default function Page() {
   const router = useRouter();
-  // Access token from AuthContext
-  let token;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [token, setToken] = useState<string | null>(null);
+
   useEffect(() => {
-    // Check if localStorage is available
+    // Check for the token during initial render
     if (typeof window !== "undefined") {
-      token = localStorage.getItem("token");
-      if (!token) {
+      const storedToken = localStorage.getItem("token");
+      if (!storedToken) {
         router.push("/signin");
+      } else {
+        setToken(storedToken);
       }
     }
-  }, [token, router]);
-
-  const productsWithPlaceholders: any = [
-    ...popularProducts,
-    ...Array.from(
-      { length: Math.max(6 - popularProducts.length, 0) },
-      (_, index) => ({
-        name: "Coming Soon",
-        href: `#`,
-        disabled: true, // Assuming you want to disable clicking
-      })
-    ),
-  ];
+  }, [router]);
 
   useEffect(() => {
-    try {
-      // var bodyFormData = new FormData();
-      // bodyFormData.append("identifier", user.usernameOrEmail);
-      // bodyFormData.append("password", user.password);
+    // Fetch data only when token is available
+    if (token) {
+      fetchData();
+    }
+  }, [token]);
 
-    //   axios
-    //     .post("http://localhost:2945/signin", bodyFormData)
-    //     .then((res) => {
-    //       login(res.data.user, res.data.token);
-    //       setError({
-    //         captcha: null,
-    //         password: null,
-    //         usernameOrEmail: null,
-    //       });
-    //       router.push("/homepage");
-    //     })
-    //     .catch((err) => {
-    //       console.log(err);
-    //       setError({
-    //         usernameOrEmail: err.response?.data.message || "Something went wrong 😢",
-    //         password: null,
-    //         captcha: null
-    //       });
-    //     });
+  async function fetchData() {
+    try {
+      if(!token) return;
+      const { fetchAllBuckets } = useBucket(token);
+      const buckets = await fetchAllBuckets();
+      const productsWithPlaceholders: Product[] = [
+        ...buckets,
+        ...Array.from({ length: Math.max(6 - buckets.length, 0) }, (_, index) => ({
+          name: "Coming Soon",
+          href: `#`,
+          disabled: true,
+        })),
+      ];
+      setProducts(productsWithPlaceholders);
+    } catch (error) {
+      console.error("Error fetching buckets:", error);
     }
-     catch (error) {
-    //   setError.prototype.usernameOrEmail("Something went wrong 😢");
-    //   console.log(error);
-    }
-  }, []);
+  }
 
   return (
     <>
@@ -69,20 +54,17 @@ export default function page() {
       <div>
         <h3>Popular</h3>
         <div>
-          {productsWithPlaceholders.map((product) =>
-            product.disabled ? (
-              <span
-                key={product.name}
-                style={{ color: "gray", textDecoration: "line-through" }}
-              >
-                {product.name}
-              </span>
-            ) : (
-              <Link key={product.name} href={product.href}>
-                {product.name}
-              </Link>
-            )
-          )}
+          {products.map((product, index) => (
+            <React.Fragment key={index}>
+              {product.disabled ? (
+                <span style={{ color: "gray", textDecoration: "line-through" }}>
+                  {product.name}
+                </span>
+              ) : (
+                <Link href={product.href}>{product.name}</Link>
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     </>

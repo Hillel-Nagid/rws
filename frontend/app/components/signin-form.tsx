@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { FormEvent, LegacyRef, useState } from "react";
+import React, { FormEvent, LegacyRef, useEffect, useState } from "react";
 import { useAuth } from "../context/authContext";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,20 @@ export default function SigninForm() {
     usernameOrEmail: "",
     password: "",
   });
+  
+  useEffect(() => {
+    // Check if localStorage is available
+    if (typeof window !== "undefined") {
+      let token:string | null;
+      // Check if localStorage is available
+      if (typeof window !== "undefined") {
+        token = localStorage.getItem("token");
+        if (token) {
+          router.push("/homepage");
+        }
+      }
+    }
+  }, [user, router]);
 
   function submitForm(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

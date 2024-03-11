@@ -8,12 +8,15 @@ export const navigation = [
     { name: 'About us', href: '/about'},
 ] as const
 
+//TODO: contains all the product=services we have. when there is a new service, you have to add it here!!
 export const s3Links=[
   { name: 'S3', href: '/homepage/s3',Icon:GrBucket },
-  { name: 'S4', href: '/homepage/s4',Icon:GrBucket },
-  { name: 'S5', href: '/homepage/s3',Icon:GrBucket },
+  // { name: 'S4', href: '/homepage/s4',Icon:GrBucket },
+  // { name: 'S5', href: '/homepage/s3',Icon:GrBucket },
 ] as const 
 
-export const popularProducts = [
-  {name: "s3", href: '/homepage/s3', disabled: false},
-] as const;
+export interface Product {
+  name: string;
+  href: string;
+  disabled: boolean;
+}
